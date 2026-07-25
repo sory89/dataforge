@@ -3,129 +3,206 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="icon" href="data:,">
 <title>DataForge — console Text-to-SQL</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230d6e6e'/%3E%3Crect x='7' y='8' width='18' height='3.2' rx='1.6' fill='%23fff'/%3E%3Crect x='7' y='14.4' width='12' height='3.2' rx='1.6' fill='%23fff' opacity='.75'/%3E%3Crect x='7' y='20.8' width='7' height='3.2' rx='1.6' fill='%23f2b230'/%3E%3C/svg%3E">
 <style>
   :root {
-    --ink: #16233a;
-    --ink-soft: #63708a;
-    --paper: #edf0f5;
+    --ink: #14213c;
+    --ink-2: #2b3a5c;
+    --ink-soft: #6b7896;
+    --paper: #eef1f7;
     --card: #ffffff;
-    --rule: #c3cddd;
-    --sql: #0d6e6e;
-    --alert: #8c2f39;
-    --live: #1f7a4d;
+    --rule: #d3dbe8;
+    --teal: #0d6e6e;
+    --teal-bg: #e6f4f3;
+    --violet: #5b3fa8;
+    --violet-bg: #efeaFB;
+    --amber: #a9700a;
+    --amber-bg: #fdf3e0;
+    --crimson: #a32639;
+    --crimson-bg: #fdeff1;
+    --live: #157f4a;
     --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
     --sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
   }
   * { box-sizing: border-box; }
   body {
-    margin: 0; background: var(--paper); color: var(--ink);
-    font-family: var(--sans); font-size: 15px; line-height: 1.55;
+    margin: 0; color: var(--ink); font-family: var(--sans);
+    font-size: 15px; line-height: 1.55;
+    background:
+      radial-gradient(1100px 420px at 8% -8%, #dfe9f7 0%, transparent 60%),
+      radial-gradient(800px 380px at 100% 0%, #e4f2f0 0%, transparent 55%),
+      var(--paper);
+    min-height: 100vh;
   }
   .label {
     font-size: 10.5px; text-transform: uppercase; letter-spacing: .14em;
-    color: var(--ink-soft); font-weight: 700;
+    font-weight: 700; color: var(--ink-soft);
   }
+
+  /* ---------- en-tete ---------- */
   header {
-    border-bottom: 1px solid var(--rule); background: var(--card);
-    padding: 18px 24px; display: flex; align-items: baseline;
-    justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    background: linear-gradient(96deg, #0f2a4a 0%, #0d5c66 58%, #0d6e6e 100%);
+    color: #fff; padding: 16px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap;
+    box-shadow: 0 1px 0 rgba(20,33,60,.18), 0 8px 24px -18px rgba(13,110,110,.6);
   }
-  h1 {
-    margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -.015em;
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand svg { display: block; flex: none; }
+  .brand h1 {
+    margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -.02em;
   }
-  h1 span { color: var(--ink-soft); font-weight: 400; }
-  #status { font-family: var(--mono); font-size: 12px; color: var(--ink-soft); }
+  .brand .sub {
+    display: block; font-size: 11px; font-weight: 500; letter-spacing: .1em;
+    text-transform: uppercase; color: #a8d9d6; margin-top: 1px;
+  }
+  #status {
+    font-family: var(--mono); font-size: 12px; color: #d7e7ea;
+    background: rgba(255,255,255,.11); border: 1px solid rgba(255,255,255,.2);
+    padding: 5px 11px; border-radius: 999px;
+  }
   .dot {
     display: inline-block; width: 7px; height: 7px; border-radius: 50%;
-    background: var(--rule); margin-right: 5px; vertical-align: 1px;
+    background: #93a4bd; margin-right: 6px; vertical-align: 1px;
   }
-  .dot.up { background: var(--live); }
-  .dot.down { background: var(--alert); }
+  .dot.up { background: #4fd39a; box-shadow: 0 0 0 3px rgba(79,211,154,.22); }
+  .dot.down { background: #ff8b9c; box-shadow: 0 0 0 3px rgba(255,139,156,.22); }
 
+  /* ---------- structure ---------- */
   main {
-    max-width: 1120px; margin: 0 auto; padding: 24px;
-    display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px;
+    max-width: 1120px; margin: 0 auto; padding: 26px 24px 48px;
+    display: grid; grid-template-columns: minmax(0,1fr) 306px; gap: 22px;
     align-items: start;
   }
-  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
 
   .panel {
-    background: var(--card); border: 1px solid var(--rule); border-radius: 3px;
-    padding: 18px;
+    background: var(--card); border: 1px solid var(--rule); border-radius: 8px;
+    padding: 20px; box-shadow: 0 1px 2px rgba(20,33,60,.05);
+    border-top: 3px solid var(--teal);
   }
-  .panel + .panel { margin-top: 20px; }
+  .panel.result { border-top-color: var(--violet); margin-top: 20px; }
+  .panel.schema { border-top-color: var(--amber); position: sticky; top: 22px; }
 
+  /* ---------- formulaire ---------- */
   textarea {
-    width: 100%; min-height: 74px; resize: vertical; margin-top: 8px;
-    padding: 11px 12px; border: 1px solid var(--rule); border-radius: 3px;
+    width: 100%; min-height: 76px; resize: vertical; margin-top: 9px;
+    padding: 12px 13px; border: 1px solid var(--rule); border-radius: 6px;
     font-family: var(--sans); font-size: 15px; color: var(--ink);
     background: #fbfcfe;
   }
+  textarea:focus { border-color: var(--teal); background: #fff; }
   textarea:focus-visible, button:focus-visible {
-    outline: 2px solid var(--sql); outline-offset: 2px;
+    outline: 2px solid var(--teal); outline-offset: 2px;
   }
-  .row { display: flex; gap: 10px; align-items: center; margin-top: 12px; }
+  .row { display: flex; gap: 12px; align-items: center; margin-top: 13px; flex-wrap: wrap; }
   button {
     font-family: var(--sans); font-size: 14px; font-weight: 600;
-    padding: 9px 18px; border-radius: 3px; cursor: pointer;
-    background: var(--ink); color: #fff; border: 1px solid var(--ink);
+    padding: 10px 20px; border-radius: 6px; cursor: pointer;
+    color: #fff; border: 0;
+    background: linear-gradient(180deg, #12817f 0%, #0d6e6e 100%);
+    box-shadow: 0 1px 2px rgba(13,110,110,.35);
   }
-  button:hover { background: #22314c; }
-  button[disabled] { opacity: .5; cursor: wait; }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  button:hover { background: linear-gradient(180deg, #16918e 0%, #0f7a7a 100%); }
+  button[disabled] { opacity: .55; cursor: wait; }
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 13px; }
   .chip {
-    background: transparent; color: var(--ink-soft); border: 1px solid var(--rule);
-    font-size: 12.5px; font-weight: 400; padding: 5px 10px;
+    background: #f5f8fc; color: var(--ink-2); border: 1px solid var(--rule);
+    font-size: 12.5px; font-weight: 500; padding: 6px 11px; box-shadow: none;
   }
-  .chip:hover { background: #f3f6fb; color: var(--ink); border-color: var(--ink-soft); }
+  .chip:hover { background: var(--teal-bg); border-color: var(--teal); color: var(--teal); }
+  .chip.tough { background: var(--amber-bg); border-color: #ecd3a0; color: var(--amber); }
+  .chip.tough:hover { background: #fbe9c9; border-color: var(--amber); }
 
+  /* ---------- SQL ---------- */
   pre {
-    margin: 8px 0 0; padding: 12px 13px; overflow-x: auto;
-    background: #f7f9fc; border-left: 2px solid var(--sql); border-radius: 0 3px 3px 0;
-    font-family: var(--mono); font-size: 13px; line-height: 1.6; color: var(--sql);
+    margin: 9px 0 0; padding: 13px 14px; overflow-x: auto;
+    background: var(--teal-bg); border-left: 3px solid var(--teal);
+    border-radius: 0 6px 6px 0; color: #0a5757;
+    font-family: var(--mono); font-size: 13px; line-height: 1.65;
     white-space: pre-wrap; word-break: break-word;
   }
-  pre.bad { border-left-color: var(--alert); color: var(--alert); background: #fdf6f7; }
-
-  table { width: 100%; border-collapse: collapse; margin-top: 10px; font-family: var(--mono); font-size: 13px; }
-  th {
-    text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em;
-    color: var(--ink-soft); padding: 6px 10px 6px 0; border-bottom: 1px solid var(--rule);
-    font-family: var(--sans);
+  pre.bad {
+    background: var(--crimson-bg); border-left-color: var(--crimson); color: var(--crimson);
   }
-  td { padding: 7px 10px 7px 0; border-bottom: 1px solid #eaeef4; }
-  td.num { text-align: right; font-variant-numeric: tabular-nums; padding-right: 18px; }
-  th.num { text-align: right; padding-right: 18px; }
 
-  .meta { margin-top: 12px; font-family: var(--mono); font-size: 11.5px; color: var(--ink-soft); }
-  .meta b { color: var(--ink); font-weight: 500; }
+  /* ---------- resultats ---------- */
+  .tbl-wrap { overflow-x: auto; margin-top: 14px; }
+  table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 13px; }
+  th {
+    text-align: left; font-family: var(--sans); font-size: 10.5px;
+    text-transform: uppercase; letter-spacing: .1em; font-weight: 700;
+    color: var(--violet); background: var(--violet-bg);
+    padding: 8px 12px; border-bottom: 1px solid #d8cdf3; white-space: nowrap;
+  }
+  td { padding: 8px 12px; border-bottom: 1px solid #eef1f7; }
+  tbody tr:nth-child(even) { background: #fafbfe; }
+  th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.num { color: var(--amber); font-weight: 600; }
+  td.nil { color: var(--ink-soft); }
 
-  /* Panneau de schema : element signature */
-  .schema { position: sticky; top: 24px; }
-  .tbl { margin-top: 14px; }
-  .tbl-name { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+  .meta { margin-top: 14px; display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+  .tag {
+    font-family: var(--mono); font-size: 11.5px; padding: 3px 9px; border-radius: 999px;
+    background: #f2f5fa; color: var(--ink-soft); border: 1px solid var(--rule);
+  }
+  .tag.v { background: var(--violet-bg); color: var(--violet); border-color: #d8cdf3; }
+  .tag.a { background: var(--amber-bg); color: var(--amber); border-color: #ecd3a0; }
+  .tag.e { background: var(--crimson-bg); color: var(--crimson); border-color: #f0c9d0; }
+  .note { font-size: 12.5px; color: var(--ink-soft); margin-top: 12px; }
+
+  /* ---------- schema (element signature) ---------- */
+  .schema .intro { font-size: 12.5px; color: var(--ink-soft); margin: 9px 0 0; }
+  .tbl-block { margin-top: 17px; }
+  .tbl-name {
+    font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--ink);
+  }
   .tbl-note { font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; }
-  .cols { list-style: none; margin: 8px 0 0; padding: 0; }
+  .cols { list-style: none; margin: 9px 0 0; padding: 0; }
   .cols li {
-    font-family: var(--mono); font-size: 12.5px; padding: 3px 7px;
-    border-left: 2px solid var(--rule); color: var(--ink-soft);
+    font-family: var(--mono); font-size: 12.5px; padding: 4px 9px;
+    border-left: 3px solid var(--rule); color: var(--ink-soft);
+    display: flex; justify-content: space-between; gap: 8px;
     transition: background .35s, color .35s, border-color .35s;
   }
   .cols li.used {
-    border-left-color: var(--sql); color: var(--sql);
-    background: #eef7f7; font-weight: 600;
+    border-left-color: var(--teal); background: var(--teal-bg);
+    color: var(--teal); font-weight: 700;
   }
-  .cols li .t { font-size: 10.5px; opacity: .65; margin-left: 6px; }
-  .hint { font-size: 12px; color: var(--ink-soft); margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--rule); }
+  .cols li .t { font-size: 10.5px; opacity: .7; font-weight: 400; }
+  .schema .foot {
+    font-size: 12px; color: var(--ink-soft);
+    margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--rule);
+  }
+  .schema code {
+    font-family: var(--mono); font-size: 11.5px; background: var(--teal-bg);
+    color: var(--teal); padding: 1px 5px; border-radius: 3px;
+  }
   @media (prefers-reduced-motion: reduce) { .cols li { transition: none; } }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>DataForge <span>· console Text-to-SQL</span></h1>
+  <div class="brand">
+    <svg width="38" height="38" viewBox="0 0 38 38" aria-hidden="true">
+      <defs>
+        <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#5be0cf"/>
+          <stop offset="1" stop-color="#2a8fb8"/>
+        </linearGradient>
+      </defs>
+      <rect width="38" height="38" rx="9" fill="url(#lg)"/>
+      <rect x="8" y="9" width="22" height="3.6" rx="1.8" fill="#fff"/>
+      <rect x="8" y="17.2" width="14.5" height="3.6" rx="1.8" fill="#fff" opacity=".72"/>
+      <rect x="8" y="25.4" width="8" height="3.6" rx="1.8" fill="#f2b230"/>
+    </svg>
+    <div>
+      <h1>DataForge</h1>
+      <span class="sub">console text-to-sql</span>
+    </div>
+  </div>
   <div id="status"><span class="dot"></span>vérification…</div>
 </header>
 
@@ -136,48 +213,49 @@
       <textarea id="q" placeholder="Exemple : quel jour a le chiffre d'affaires le plus élevé ?"></textarea>
       <div class="row">
         <button id="go">Générer et exécuter</button>
-        <span class="meta" id="timer"></span>
+        <span class="tag" id="timer" hidden>génération…</span>
       </div>
       <div class="chips" id="chips"></div>
     </section>
 
-    <section class="panel" id="out" hidden>
+    <section class="panel result" id="out" hidden>
       <span class="label">SQL généré par le modèle</span>
       <pre id="sql"></pre>
-      <div id="rows"></div>
+      <div class="tbl-wrap" id="rows"></div>
       <div class="meta" id="meta"></div>
+      <p class="note" id="note" hidden></p>
     </section>
   </div>
 
   <aside class="panel schema">
     <span class="label">Schéma disponible</span>
-    <p class="hint" style="border:0;padding:0;margin:8px 0 0">
+    <p class="intro">
       Les colonnes utilisées par le SQL généré s'allument après chaque question.
     </p>
 
-    <div class="tbl">
+    <div class="tbl-block">
       <div class="tbl-name">fct_daily_revenue</div>
       <div class="tbl-note">Une ligne par jour, déjà agrégée</div>
-      <ul class="cols" data-t="fct">
-        <li data-c="order_date">order_date<span class="t">date</span></li>
-        <li data-c="nb_orders">nb_orders<span class="t">bigint</span></li>
-        <li data-c="revenue_eur">revenue_eur<span class="t">double</span></li>
+      <ul class="cols">
+        <li data-c="order_date"><span>order_date</span><span class="t">date</span></li>
+        <li data-c="nb_orders"><span>nb_orders</span><span class="t">bigint</span></li>
+        <li data-c="revenue_eur"><span>revenue_eur</span><span class="t">double</span></li>
       </ul>
     </div>
 
-    <div class="tbl">
+    <div class="tbl-block">
       <div class="tbl-name">stg_orders</div>
       <div class="tbl-note">Une ligne par commande</div>
-      <ul class="cols" data-t="stg">
-        <li data-c="order_id">order_id<span class="t">int</span></li>
-        <li data-c="customer_id">customer_id<span class="t">int</span></li>
-        <li data-c="order_date">order_date<span class="t">date</span></li>
-        <li data-c="amount_eur">amount_eur<span class="t">double</span></li>
-        <li data-c="status">status<span class="t">varchar</span></li>
+      <ul class="cols">
+        <li data-c="order_id"><span>order_id</span><span class="t">int</span></li>
+        <li data-c="customer_id"><span>customer_id</span><span class="t">int</span></li>
+        <li data-c="order_date"><span>order_date</span><span class="t">date</span></li>
+        <li data-c="amount_eur"><span>amount_eur</span><span class="t">double</span></li>
+        <li data-c="status"><span>status</span><span class="t">varchar</span></li>
       </ul>
     </div>
 
-    <p class="hint">
+    <p class="foot">
       Le service n'exécute que des <code>SELECT</code>. Toute écriture est refusée
       avant d'atteindre la base.
     </p>
@@ -186,28 +264,28 @@
 
 <script>
 const EXAMPLES = [
-  "Quel est le chiffre d'affaires total ?",
-  "Quelle date a le chiffre d'affaires le plus élevé ?",
-  "Quels clients ont passé au moins 2 commandes ?",
-  "Moyenne mobile du chiffre d'affaires sur 3 jours",
-  "Panier moyen par jour"
+  { q: "Quel est le chiffre d'affaires total ?" },
+  { q: "Quelle date a le chiffre d'affaires le plus élevé ?" },
+  { q: "Quels clients ont passé au moins 2 commandes ?" },
+  { q: "Moyenne mobile du chiffre d'affaires sur 3 jours" },
+  { q: "Panier moyen par jour", tough: true }
 ];
 
 const $ = (id) => document.getElementById(id);
 
-EXAMPLES.forEach((text) => {
+EXAMPLES.forEach(({ q, tough }) => {
   const b = document.createElement("button");
-  b.className = "chip";
-  b.textContent = text;
-  b.onclick = () => { $("q").value = text; ask(); };
+  b.className = "chip" + (tough ? " tough" : "");
+  b.textContent = q;
+  if (tough) b.title = "Ce cas met le modèle en échec";
+  b.onclick = () => { $("q").value = q; ask(); };
   $("chips").appendChild(b);
 });
 
 async function health() {
   const el = $("status");
   try {
-    const r = await fetch("/readyz");
-    const d = await r.json();
+    const d = await (await fetch("/readyz")).json();
     const ok = d.checks.duckdb === "ok" && d.checks.ollama === "ok";
     el.innerHTML = `<span class="dot ${ok ? "up" : "down"}"></span>` +
       `base ${d.checks.duckdb} · modèle ${d.checks.ollama}`;
@@ -219,33 +297,27 @@ async function health() {
 function highlight(sql) {
   const low = (sql || "").toLowerCase();
   document.querySelectorAll(".cols li").forEach((li) => {
-    const col = li.dataset.c;
-    const used = new RegExp(`\\b${col}\\b`).test(low);
-    li.classList.toggle("used", used);
+    li.classList.toggle("used", new RegExp(`\\b${li.dataset.c}\\b`).test(low));
   });
 }
 
 function renderRows(rows) {
   const host = $("rows");
   host.innerHTML = "";
-  if (!rows || !rows.length) {
-    host.innerHTML = '<p class="meta">Aucune ligne retournée.</p>';
-    return;
-  }
+  if (!rows || !rows.length) return;
   const cols = Object.keys(rows[0]);
-  const isNum = (v) => typeof v === "number";
+  const num = (v) => typeof v === "number";
   const table = document.createElement("table");
   table.innerHTML =
     "<thead><tr>" +
-    cols.map((c) => `<th class="${isNum(rows[0][c]) ? "num" : ""}">${c}</th>`).join("") +
+    cols.map((c) => `<th class="${num(rows[0][c]) ? "num" : ""}">${c}</th>`).join("") +
     "</tr></thead><tbody>" +
-    rows.map((r) =>
-      "<tr>" + cols.map((c) => {
-        const v = r[c];
-        const txt = v === null ? "∅" : isNum(v) ? v.toLocaleString("fr-FR") : String(v);
-        return `<td class="${isNum(v) ? "num" : ""}">${txt}</td>`;
-      }).join("") + "</tr>"
-    ).join("") +
+    rows.map((r) => "<tr>" + cols.map((c) => {
+      const v = r[c];
+      if (v === null) return '<td class="nil">∅</td>';
+      const txt = num(v) ? v.toLocaleString("fr-FR") : String(v);
+      return `<td class="${num(v) ? "num" : ""}">${txt}</td>`;
+    }).join("") + "</tr>").join("") +
     "</tbody>";
   host.appendChild(table);
 }
@@ -256,12 +328,13 @@ async function ask() {
 
   const btn = $("go");
   btn.disabled = true;
-  $("timer").textContent = "génération en cours…";
+  $("timer").hidden = false;
   $("out").hidden = false;
   $("sql").className = "";
   $("sql").textContent = "…";
   $("rows").innerHTML = "";
-  $("meta").textContent = "";
+  $("meta").innerHTML = "";
+  $("note").hidden = true;
 
   const t0 = performance.now();
   try {
@@ -276,9 +349,13 @@ async function ask() {
     if (!r.ok) {
       $("sql").className = "bad";
       $("sql").textContent = d.detail || `Erreur ${r.status}`;
-      $("meta").innerHTML = r.status === 502
-        ? "Le modèle ne répond pas. Vérifiez qu'Ollama est démarré et joignable."
-        : `Statut <b>${r.status}</b> · <b>${ms} ms</b>`;
+      $("meta").innerHTML =
+        `<span class="tag e">statut ${r.status}</span><span class="tag">${ms} ms</span>`;
+      if (r.status === 502) {
+        $("note").textContent =
+          "Le modèle ne répond pas. Vérifiez qu'Ollama est démarré et joignable.";
+        $("note").hidden = false;
+      }
       highlight("");
       return;
     }
@@ -287,14 +364,20 @@ async function ask() {
     highlight(d.sql);
     renderRows(d.rows);
     $("meta").innerHTML =
-      `<b>${d.rows.length}</b> ligne(s) · prompt <b>${d.prompt_version}</b> · <b>${ms} ms</b>`;
+      `<span class="tag a">${d.rows.length} ligne${d.rows.length > 1 ? "s" : ""}</span>` +
+      `<span class="tag v">prompt ${d.prompt_version}</span>` +
+      `<span class="tag">${ms} ms</span>`;
+    if (!d.rows.length) {
+      $("note").textContent = "La requête est valide mais ne retourne aucune ligne.";
+      $("note").hidden = false;
+    }
   } catch (e) {
     $("sql").className = "bad";
     $("sql").textContent = String(e);
-    $("meta").textContent = "Requête interrompue.";
+    $("meta").innerHTML = '<span class="tag e">requête interrompue</span>';
   } finally {
     btn.disabled = false;
-    $("timer").textContent = "";
+    $("timer").hidden = true;
   }
 }
 
