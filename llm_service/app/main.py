@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import duckdb
 import httpx
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from app.sql_gen import OLLAMA_URL, generate_sql, is_safe_sql
@@ -13,6 +15,7 @@ from app.sql_gen import OLLAMA_URL, generate_sql, is_safe_sql
 app = FastAPI(title="DataForge Text-to-SQL", version="1.0.0")
 
 DB_PATH = os.getenv("DUCKDB_PATH", ":memory:")
+INDEX = Path(__file__).parent / "index.html"
 PROMPT_VERSION = os.getenv("PROMPT_VERSION", "v4")
 
 
@@ -24,6 +27,12 @@ class SQLResponse(BaseModel):
     sql: str
     rows: list[dict]
     prompt_version: str
+
+
+@app.get("/", include_in_schema=False)
+def console() -> FileResponse:
+    """Console web : poser une question et voir le SQL genere puis le resultat."""
+    return FileResponse(INDEX, media_type="text/html")
 
 
 @app.get("/healthz")

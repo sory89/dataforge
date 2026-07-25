@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>DataForge — console Text-to-SQL</title>
+<style>
+  :root {
+    --ink: #16233a;
+    --ink-soft: #63708a;
+    --paper: #edf0f5;
+    --card: #ffffff;
+    --rule: #c3cddd;
+    --sql: #0d6e6e;
+    --alert: #8c2f39;
+    --live: #1f7a4d;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+    --sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--sans); font-size: 15px; line-height: 1.55;
+  }
+  .label {
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: .14em;
+    color: var(--ink-soft); font-weight: 700;
+  }
+  header {
+    border-bottom: 1px solid var(--rule); background: var(--card);
+    padding: 18px 24px; display: flex; align-items: baseline;
+    justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  }
+  h1 {
+    margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -.015em;
+  }
+  h1 span { color: var(--ink-soft); font-weight: 400; }
+  #status { font-family: var(--mono); font-size: 12px; color: var(--ink-soft); }
+  .dot {
+    display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--rule); margin-right: 5px; vertical-align: 1px;
+  }
+  .dot.up { background: var(--live); }
+  .dot.down { background: var(--alert); }
+
+  main {
+    max-width: 1120px; margin: 0 auto; padding: 24px;
+    display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--card); border: 1px solid var(--rule); border-radius: 3px;
+    padding: 18px;
+  }
+  .panel + .panel { margin-top: 20px; }
+
+  textarea {
+    width: 100%; min-height: 74px; resize: vertical; margin-top: 8px;
+    padding: 11px 12px; border: 1px solid var(--rule); border-radius: 3px;
+    font-family: var(--sans); font-size: 15px; color: var(--ink);
+    background: #fbfcfe;
+  }
+  textarea:focus-visible, button:focus-visible {
+    outline: 2px solid var(--sql); outline-offset: 2px;
+  }
+  .row { display: flex; gap: 10px; align-items: center; margin-top: 12px; }
+  button {
+    font-family: var(--sans); font-size: 14px; font-weight: 600;
+    padding: 9px 18px; border-radius: 3px; cursor: pointer;
+    background: var(--ink); color: #fff; border: 1px solid var(--ink);
+  }
+  button:hover { background: #22314c; }
+  button[disabled] { opacity: .5; cursor: wait; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip {
+    background: transparent; color: var(--ink-soft); border: 1px solid var(--rule);
+    font-size: 12.5px; font-weight: 400; padding: 5px 10px;
+  }
+  .chip:hover { background: #f3f6fb; color: var(--ink); border-color: var(--ink-soft); }
+
+  pre {
+    margin: 8px 0 0; padding: 12px 13px; overflow-x: auto;
+    background: #f7f9fc; border-left: 2px solid var(--sql); border-radius: 0 3px 3px 0;
+    font-family: var(--mono); font-size: 13px; line-height: 1.6; color: var(--sql);
+    white-space: pre-wrap; word-break: break-word;
+  }
+  pre.bad { border-left-color: var(--alert); color: var(--alert); background: #fdf6f7; }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; font-family: var(--mono); font-size: 13px; }
+  th {
+    text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em;
+    color: var(--ink-soft); padding: 6px 10px 6px 0; border-bottom: 1px solid var(--rule);
+    font-family: var(--sans);
+  }
+  td { padding: 7px 10px 7px 0; border-bottom: 1px solid #eaeef4; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; padding-right: 18px; }
+  th.num { text-align: right; padding-right: 18px; }
+
+  .meta { margin-top: 12px; font-family: var(--mono); font-size: 11.5px; color: var(--ink-soft); }
+  .meta b { color: var(--ink); font-weight: 500; }
+
+  /* Panneau de schema : element signature */
+  .schema { position: sticky; top: 24px; }
+  .tbl { margin-top: 14px; }
+  .tbl-name { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+  .tbl-note { font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; }
+  .cols { list-style: none; margin: 8px 0 0; padding: 0; }
+  .cols li {
+    font-family: var(--mono); font-size: 12.5px; padding: 3px 7px;
+    border-left: 2px solid var(--rule); color: var(--ink-soft);
+    transition: background .35s, color .35s, border-color .35s;
+  }
+  .cols li.used {
+    border-left-color: var(--sql); color: var(--sql);
+    background: #eef7f7; font-weight: 600;
+  }
+  .cols li .t { font-size: 10.5px; opacity: .65; margin-left: 6px; }
+  .hint { font-size: 12px; color: var(--ink-soft); margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--rule); }
+  @media (prefers-reduced-motion: reduce) { .cols li { transition: none; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>DataForge <span>· console Text-to-SQL</span></h1>
+  <div id="status"><span class="dot"></span>vérification…</div>
+</header>
+
+<main>
+  <div>
+    <section class="panel">
+      <label class="label" for="q">Votre question, en français</label>
+      <textarea id="q" placeholder="Exemple : quel jour a le chiffre d'affaires le plus élevé ?"></textarea>
+      <div class="row">
+        <button id="go">Générer et exécuter</button>
+        <span class="meta" id="timer"></span>
+      </div>
+      <div class="chips" id="chips"></div>
+    </section>
+
+    <section class="panel" id="out" hidden>
+      <span class="label">SQL généré par le modèle</span>
+      <pre id="sql"></pre>
+      <div id="rows"></div>
+      <div class="meta" id="meta"></div>
+    </section>
+  </div>
+
+  <aside class="panel schema">
+    <span class="label">Schéma disponible</span>
+    <p class="hint" style="border:0;padding:0;margin:8px 0 0">
+      Les colonnes utilisées par le SQL généré s'allument après chaque question.
+    </p>
+
+    <div class="tbl">
+      <div class="tbl-name">fct_daily_revenue</div>
+      <div class="tbl-note">Une ligne par jour, déjà agrégée</div>
+      <ul class="cols" data-t="fct">
+        <li data-c="order_date">order_date<span class="t">date</span></li>
+        <li data-c="nb_orders">nb_orders<span class="t">bigint</span></li>
+        <li data-c="revenue_eur">revenue_eur<span class="t">double</span></li>
+      </ul>
+    </div>
+
+    <div class="tbl">
+      <div class="tbl-name">stg_orders</div>
+      <div class="tbl-note">Une ligne par commande</div>
+      <ul class="cols" data-t="stg">
+        <li data-c="order_id">order_id<span class="t">int</span></li>
+        <li data-c="customer_id">customer_id<span class="t">int</span></li>
+        <li data-c="order_date">order_date<span class="t">date</span></li>
+        <li data-c="amount_eur">amount_eur<span class="t">double</span></li>
+        <li data-c="status">status<span class="t">varchar</span></li>
+      </ul>
+    </div>
+
+    <p class="hint">
+      Le service n'exécute que des <code>SELECT</code>. Toute écriture est refusée
+      avant d'atteindre la base.
+    </p>
+  </aside>
+</main>
+
+<script>
+const EXAMPLES = [
+  "Quel est le chiffre d'affaires total ?",
+  "Quelle date a le chiffre d'affaires le plus élevé ?",
+  "Quels clients ont passé au moins 2 commandes ?",
+  "Moyenne mobile du chiffre d'affaires sur 3 jours",
+  "Panier moyen par jour"
+];
+
+const $ = (id) => document.getElementById(id);
+
+EXAMPLES.forEach((text) => {
+  const b = document.createElement("button");
+  b.className = "chip";
+  b.textContent = text;
+  b.onclick = () => { $("q").value = text; ask(); };
+  $("chips").appendChild(b);
+});
+
+async function health() {
+  const el = $("status");
+  try {
+    const r = await fetch("/readyz");
+    const d = await r.json();
+    const ok = d.checks.duckdb === "ok" && d.checks.ollama === "ok";
+    el.innerHTML = `<span class="dot ${ok ? "up" : "down"}"></span>` +
+      `base ${d.checks.duckdb} · modèle ${d.checks.ollama}`;
+  } catch {
+    el.innerHTML = '<span class="dot down"></span>service injoignable';
+  }
+}
+
+function highlight(sql) {
+  const low = (sql || "").toLowerCase();
+  document.querySelectorAll(".cols li").forEach((li) => {
+    const col = li.dataset.c;
+    const used = new RegExp(`\\b${col}\\b`).test(low);
+    li.classList.toggle("used", used);
+  });
+}
+
+function renderRows(rows) {
+  const host = $("rows");
+  host.innerHTML = "";
+  if (!rows || !rows.length) {
+    host.innerHTML = '<p class="meta">Aucune ligne retournée.</p>';
+    return;
+  }
+  const cols = Object.keys(rows[0]);
+  const isNum = (v) => typeof v === "number";
+  const table = document.createElement("table");
+  table.innerHTML =
+    "<thead><tr>" +
+    cols.map((c) => `<th class="${isNum(rows[0][c]) ? "num" : ""}">${c}</th>`).join("") +
+    "</tr></thead><tbody>" +
+    rows.map((r) =>
+      "<tr>" + cols.map((c) => {
+        const v = r[c];
+        const txt = v === null ? "∅" : isNum(v) ? v.toLocaleString("fr-FR") : String(v);
+        return `<td class="${isNum(v) ? "num" : ""}">${txt}</td>`;
+      }).join("") + "</tr>"
+    ).join("") +
+    "</tbody>";
+  host.appendChild(table);
+}
+
+async function ask() {
+  const question = $("q").value.trim();
+  if (!question) { $("q").focus(); return; }
+
+  const btn = $("go");
+  btn.disabled = true;
+  $("timer").textContent = "génération en cours…";
+  $("out").hidden = false;
+  $("sql").className = "";
+  $("sql").textContent = "…";
+  $("rows").innerHTML = "";
+  $("meta").textContent = "";
+
+  const t0 = performance.now();
+  try {
+    const r = await fetch("/query", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question })
+    });
+    const ms = Math.round(performance.now() - t0);
+    const d = await r.json();
+
+    if (!r.ok) {
+      $("sql").className = "bad";
+      $("sql").textContent = d.detail || `Erreur ${r.status}`;
+      $("meta").innerHTML = r.status === 502
+        ? "Le modèle ne répond pas. Vérifiez qu'Ollama est démarré et joignable."
+        : `Statut <b>${r.status}</b> · <b>${ms} ms</b>`;
+      highlight("");
+      return;
+    }
+
+    $("sql").textContent = d.sql;
+    highlight(d.sql);
+    renderRows(d.rows);
+    $("meta").innerHTML =
+      `<b>${d.rows.length}</b> ligne(s) · prompt <b>${d.prompt_version}</b> · <b>${ms} ms</b>`;
+  } catch (e) {
+    $("sql").className = "bad";
+    $("sql").textContent = String(e);
+    $("meta").textContent = "Requête interrompue.";
+  } finally {
+    btn.disabled = false;
+    $("timer").textContent = "";
+  }
+}
+
+$("go").onclick = ask;
+$("q").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) ask();
+});
+health();
+setInterval(health, 20000);
+</script>
+</body>
+</html>
