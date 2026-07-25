@@ -23,12 +23,12 @@ kubectl config use-context "$PROFILE"
 # --- 2. ArgoCD ---
 echo ">> Installation ArgoCD"
 kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+kubectl apply --server-side --force-conflicts -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 
 # --- 3. Argo Rollouts (blue/green) ---
 echo ">> Installation Argo Rollouts"
 kubectl create namespace argo-rollouts --dry-run=client -o yaml | kubectl apply -f -
-kubectl apply -n argo-rollouts -f https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml
+kubectl apply --server-side --force-conflicts -n argo-rollouts -f https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml
 
 echo ">> Attente ArgoCD..."
 kubectl -n argocd rollout status deploy/argocd-server --timeout=300s
