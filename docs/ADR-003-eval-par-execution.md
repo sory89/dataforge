@@ -119,3 +119,34 @@ aurait ete deploye comme une amelioration.
 Decision : **v4 reste le prompt de production**. v5 est conserve dans le code
 comme experience documentee. Progresser au-dela de 92 % passe par un modele plus
 capable, pas par du prompt engineering supplementaire sur celui-ci.
+
+### v5 : experience negative, retour a v4
+
+| Prompt | Basiques | Difficiles | Total |
+|---|---|---|---|
+| v4 | 5/5 | 6/7 | **92 %** |
+| v5 | 4/5 | 6/7 | 83 % |
+
+v5 a bien corrige sa cible (le panier moyen passe, sans GROUP BY superflu), mais
+a provoque deux regressions ailleurs :
+
+1. L'exemple `SELECT customer_id, COUNT(*) FROM stg_orders GROUP BY customer_id`
+   a pousse le modele vers la table de detail pour toute question de comptage :
+   « nombre de commandes par jour » interroge desormais `stg_orders` et renvoie
+   6 lignes au lieu de 5.
+2. Sur le LAG, apparition d'un `WHERE order_date > DATE_TRUNC('day',
+   CURRENT_DATE)` injustifie qui vide le resultat.
+
+**Enseignement principal du projet** : sur un modele de 1,5 Md de parametres, une
+modification de prompt a des effets **non locaux**. Ajouter un exemple pour
+corriger un cas en degrade d'autres, de facon non predictible. Deux tentatives
+d'amelioration successives (v3, v5) ont toutes deux baisse le score.
+
+C'est ce qui justifie l'existence du gate : il a detecte une regression
+introduite par un changement qui paraissait raisonnable et qui corrigeait
+effectivement sa cible. Sans mesure d'execution sur un jeu discriminant, v5
+aurait ete deploye comme une amelioration.
+
+Decision : **v4 reste le prompt de production**. v5 est conserve dans le code
+comme experience documentee. Progresser au-dela de 92 % passe par un modele plus
+capable, pas par du prompt engineering supplementaire sur celui-ci.
