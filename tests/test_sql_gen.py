@@ -27,3 +27,48 @@ def test_safe_sql_rejects_ddl_dml():
 
 def test_safe_sql_rejects_non_select():
     assert not is_safe_sql("WITH x AS (SELECT 1) INSERT INTO t SELECT * FROM x")
+
+
+def test_query_retourne_502_si_llm_injoignable(monkeypatch, tmp_path):
+    """Regression : un LLM injoignable doit donner 502, pas 500 (bug du 25/07/2026)."""
+    import duckdb
+    from fastapi.testclient import TestClient
+
+    db = tmp_path / "t.duckdb"
+    duckdb.connect(str(db)).execute(
+        "create table fct_daily_revenue(order_date date, nb_orders bigint, revenue_eur double)"
+    )
+    monkeypatch.setenv("DUCKDB_PATH", str(db))
+    monkeypatch.setenv("OLLAMA_URL", "http://127.0.0.1:1")
+
+    import importlib
+
+    from app import main, sql_gen
+
+    importlib.reload(sql_gen)
+    importlib.reload(main)
+    client = TestClient(main.app)
+    assert client.post("/query", json={"question": "total ?"}).status_code == 502
+
+
+def test_readyz_ne_depend_pas_du_llm(monkeypatch, tmp_path):
+    """La readiness ne doit pas tomber quand seul le LLM est injoignable."""
+    import duckdb
+    from fastapi.testclient import TestClient
+
+    db = tmp_path / "t2.duckdb"
+    duckdb.connect(str(db)).execute(
+        "create table fct_daily_revenue(order_date date, nb_orders bigint, revenue_eur double)"
+    )
+    monkeypatch.setenv("DUCKDB_PATH", str(db))
+    monkeypatch.setenv("OLLAMA_URL", "http://127.0.0.1:1")
+
+    import importlib
+
+    from app import main, sql_gen
+
+    importlib.reload(sql_gen)
+    importlib.reload(main)
+    body = TestClient(main.app).get("/readyz").json()
+    assert body["ready"] is True
+    assert "injoignable" in body["checks"]["ollama"]

@@ -37,5 +37,3 @@ PR ──► CI (lint, tests, Slim CI dbt, Trivy, SBOM, gate éval LLM)
 - `docs/minikube-guide.md` — guide local pas à pas
 - `docs/ADR-001-slim-ci.md` — pourquoi le Slim CI dbt
 - `docs/ADR-002-blue-green-llm.md` — pourquoi le blue/green pour un service LLM
-# dataforge
-# dataforge

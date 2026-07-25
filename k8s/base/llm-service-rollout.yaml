@@ -33,16 +33,19 @@ spec:
           ports:
             - containerPort: 8000
           env:
+            # En local Minikube, Ollama tourne sur l'hote (WSL), pas dans le cluster.
+            # host.minikube.internal resout vers l'hote depuis un pod.
             - name: OLLAMA_URL
-              value: http://ollama.dataforge.svc:11434
+              value: http://host.minikube.internal:11434
             - name: PROMPT_VERSION
               value: v4
           resources:
             requests: { cpu: 100m, memory: 256Mi }
             limits: { cpu: 500m, memory: 512Mi }
           readinessProbe:
-            httpGet: { path: /healthz, port: 8000 }
+            httpGet: { path: /readyz, port: 8000 }
             initialDelaySeconds: 5
+            failureThreshold: 6
           livenessProbe:
             httpGet: { path: /healthz, port: 8000 }
             initialDelaySeconds: 15

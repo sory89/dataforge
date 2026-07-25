@@ -37,11 +37,40 @@ MOCK_ANSWERS = {
     "montant_moyen": (
         "select avg(amount_eur) from stg_orders where status = 'completed';"
     ),
+    "clients_meilleur_jour": (
+        "select distinct customer_id from stg_orders where order_date = "
+        "(select order_date from fct_daily_revenue order by revenue_eur desc limit 1);"
+    ),
+    "part_relative": (
+        "select order_date, round(100.0 * revenue_eur / "
+        "(select sum(revenue_eur) from fct_daily_revenue), 2) from fct_daily_revenue;"
+    ),
+    "moyenne_mobile_3j": (
+        "select order_date, round(avg(revenue_eur) over (order by order_date "
+        "rows between 2 preceding and current row), 2) from fct_daily_revenue;"
+    ),
+    "clients_fideles": (
+        "select customer_id, count(*) from stg_orders group by customer_id "
+        "having count(*) >= 2;"
+    ),
+    "jours_sup_moyenne": (
+        "select order_date from fct_daily_revenue where revenue_eur > "
+        "(select avg(revenue_eur) from fct_daily_revenue);"
+    ),
+    "panier_moyen_par_jour": (
+        "select order_date, round(revenue_eur / nb_orders, 2) from fct_daily_revenue;"
+    ),
+    "ecart_jour_precedent": (
+        "select order_date, round(revenue_eur - lag(revenue_eur) over "
+        "(order by order_date), 2) from fct_daily_revenue;"
+    ),
 }
 
 
 def normalize(value: object) -> object:
-    """Rend les valeurs comparables : dates -> ISO, floats -> arrondis."""
+    """Rend les valeurs comparables : dates -> ISO, floats -> arrondis, None conserve."""
+    if value is None:
+        return None
     if isinstance(value, date):
         return value.isoformat()
     if isinstance(value, float):
@@ -77,11 +106,15 @@ def compare(rows: list[tuple], case: dict) -> tuple[bool, str]:
     if len(actual) != len(expected):
         return False, f"{len(actual)} ligne(s) au lieu de {len(expected)}"
 
-    for got, want in zip(actual, expected):
+    for got, want in zip(actual, expected, strict=False):
         if len(got) < len(want):
             return False, f"colonnes manquantes : {got} vs {want}"
-        for g, w in zip(got, want):
-            if isinstance(g, (int, float)) and isinstance(w, (int, float)):
+        for g, w in zip(got, want, strict=False):
+            if g is None or w is None:
+                if g is not w:
+                    return False, f"valeur {g!r} au lieu de {w!r}"
+                continue
+            if isinstance(g, int | float) and isinstance(w, int | float):
                 if abs(g - w) > case.get("tolerance", 0.01):
                     return False, f"valeur {g} au lieu de {w}"
             elif str(g) != str(w):
@@ -104,6 +137,7 @@ async def run(threshold: float, mock: bool, prompt: str) -> int:
     cases = json.loads(GOLDEN.read_text())
     con = duckdb.connect(str(DB_PATH), read_only=True)
     passed = 0
+    results: dict[str, bool] = {}
 
     for case in cases:
         if mock:
@@ -114,6 +148,7 @@ async def run(threshold: float, mock: bool, prompt: str) -> int:
             sql = await generate_sql(case["question"], prompt_version=prompt)
             if not is_safe_sql(sql):
                 print(f"[FAIL] {case['question']}\n       SQL rejeté (non lecture seule)")
+                results[case["id"]] = False
                 continue
 
         rows, err = execute(sql, con)
@@ -123,12 +158,18 @@ async def run(threshold: float, mock: bool, prompt: str) -> int:
             ok, detail = compare(rows, case)
 
         passed += ok
+        results[case["id"]] = ok
         print(f"[{'PASS' if ok else 'FAIL'}] {case['question']}")
         print(f"       {' '.join(sql.split())}")
         print(f"       -> {detail}")
 
     score = passed / len(cases)
-    print(f"\nScore d'exécution : {score:.0%} ({passed}/{len(cases)})", end="")
+    basiques = [c for c in cases if c.get("difficulty", "basique") == "basique"]
+    n_bas = sum(results[c["id"]] for c in basiques)
+    n_hard = passed - n_bas
+    print(f"\n  basiques : {n_bas}/{len(basiques)}", end="")
+    print(f"   difficiles : {n_hard}/{len(cases) - len(basiques)}")
+    print(f"Score d'exécution : {score:.0%} ({passed}/{len(cases)})", end="")
     print(f" — seuil : {threshold:.0%} — prompt : {'mock' if mock else prompt}")
     return 0 if score >= threshold else 1
 
@@ -139,7 +180,7 @@ if __name__ == "__main__":
     parser.add_argument("--mock", action="store_true")
     parser.add_argument("--prompt", default="v4", choices=["v1", "v2", "v3", "v4"])
     parser.add_argument(
-        "--runs", type=int, default=1, help="repete l'eval pour mesurer la stabilite"
+        "--runs", type=int, default=1, help="répète l'éval pour mesurer la stabilité"
     )
     args = parser.parse_args()
 
@@ -151,6 +192,6 @@ if __name__ == "__main__":
         print(f"\n########## run {i + 1}/{args.runs} ##########")
         codes.append(asyncio.run(run(args.threshold, args.mock, args.prompt)))
     stable = len(set(codes)) == 1
-    print(f"\nStabilite sur {args.runs} runs : ", end="")
-    print("deterministe" if stable else f"NON DETERMINISTE (verdicts {codes})")
+    print(f"\nStabilité sur {args.runs} runs : ", end="")
+    print("déterministe" if stable else f"NON DÉTERMINISTE (verdicts {codes})")
     sys.exit(max(codes))

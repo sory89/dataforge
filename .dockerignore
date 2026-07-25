@@ -1,0 +1,13 @@
+.git
+.venv
+.github
+k8s
+docs
+scripts
+airflow
+tests
+**/__pycache__
+**/target
+**/logs
+**/*.duckdb
+*.sh

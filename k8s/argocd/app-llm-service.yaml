@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/sory89/dataforge.git
+    repoURL: https://github.com/OWNER/dataforge.git
     targetRevision: main
     path: k8s/base
   destination:

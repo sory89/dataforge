@@ -31,3 +31,29 @@ quotidiennes.
 - Le golden set doit être recalibré quand les données de seed changent.
 - `tests/test_eval_detects_bad_sql.py` verrouille les deux cas réels observés.
 - La base dbt devient un prérequis du gate : le CI lance `dbt build` avant.
+
+## Addendum — itération sur les prompts (25/07/2026)
+
+Mesures réelles avec `qwen2.5-coder:1.5b`, éval par exécution :
+
+| Prompt | Score | Nature des échecs |
+|---|---|---|
+| v2 (schéma seul) | 80 % | JOIN détail×agrégat, colonne inventée |
+| v3 (règles négatives) | 40 % | colonnes omises — le modèle sur-applique les interdictions |
+| v4 (few-shot) | à mesurer | — |
+
+Deux enseignements contre-intuitifs :
+
+1. **Les règles négatives dégradent les petits modèles.** Passer de v2 à v3 en
+   ajoutant « n'y fais JAMAIS de JOIN » a fait chuter le score de moitié : le
+   modèle a produit des requêtes minimalistes en supprimant des colonnes
+   nécessaires. Sur un modèle de 1,5 Md de paramètres, les exemples (few-shot)
+   sont un levier bien plus fiable que les interdictions.
+2. **Un golden set ambigu mesure le test, pas le modèle.** « Combien de commandes
+   par jour ? » n'indique pas si la date doit figurer dans le résultat. Deux des
+   trois échecs de v3 venaient de cette ambiguïté, pas du modèle. Les questions
+   ont été reformulées pour expliciter la forme attendue.
+
+D'où `make llm-eval-compare`, qui mesure tous les prompts sur le même golden set :
+sans mesure comparative, l'intuition sur « le meilleur prompt » est fausse une
+fois sur deux.

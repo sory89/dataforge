@@ -53,14 +53,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build image (scan only)
-        run: docker build -t llm-service:scan llm_service/
+        run: docker build -f llm_service/Dockerfile -t llm-service:scan .
       - name: Trivy scan image
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: llm-service:scan
           format: sarif
           output: trivy.sarif
           severity: CRITICAL,HIGH
+          ignore-unfixed: true   # ne bloque que sur les CVE corrigeables
           exit-code: "1"
       - uses: github/codeql-action/upload-sarif@v3
         if: always()

@@ -30,7 +30,7 @@ llm-eval:
 	$(PY) llm_service/eval/run_eval.py --threshold 0.80
 
 docker-build:
-	docker build -t dataforge/llm-service:local llm_service/
+	docker build -f llm_service/Dockerfile -t dataforge/llm-service:local .
 
 # --- Minikube ---
 .PHONY: mk-up mk-down mk-build mk-deploy mk-status
@@ -52,8 +52,7 @@ mk-status:
 	kubectl argo rollouts get rollout llm-service -n dataforge || true
 
 llm-eval-compare:
-	@echo "--- prompt v2 ---" && $(PY) llm_service/eval/run_eval.py --prompt v2 --threshold 0 || true
-	@echo "--- prompt v3 ---" && $(PY) llm_service/eval/run_eval.py --prompt v3 --threshold 0 || true
-
-llm-eval-stability:
-	$(PY) llm_service/eval/run_eval.py --prompt v4 --threshold 0.80 --runs 3
+	@for v in v2 v3 v4; do \
+		echo "=== prompt $$v ==="; \
+		$(PY) llm_service/eval/run_eval.py --prompt $$v --threshold 0 | tail -1; \
+	done

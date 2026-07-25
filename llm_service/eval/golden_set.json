@@ -2,37 +2,233 @@
   {
     "id": "ca_total",
     "question": "Quel est le chiffre d'affaires total ?",
-    "expected_rows": [[1209.7]],
-    "tolerance": 0.01
+    "expected_rows": [
+      [
+        1209.7
+      ]
+    ],
+    "tolerance": 0.01,
+    "difficulty": "basique"
   },
   {
     "id": "commandes_par_jour",
     "question": "Pour chaque jour, donne la date et le nombre de commandes",
     "expected_rows": [
-      ["2026-06-01", 1],
-      ["2026-06-02", 3],
-      ["2026-06-05", 2],
-      ["2026-06-08", 1],
-      ["2026-06-09", 3]
+      [
+        "2026-06-01",
+        1
+      ],
+      [
+        "2026-06-02",
+        3
+      ],
+      [
+        "2026-06-05",
+        2
+      ],
+      [
+        "2026-06-08",
+        1
+      ],
+      [
+        "2026-06-09",
+        3
+      ]
     ],
-    "order_matters": false
+    "order_matters": false,
+    "difficulty": "basique"
   },
   {
     "id": "commandes_client_101",
     "question": "Affiche toutes les colonnes des commandes du client 101",
     "expected_contains_value": 120.5,
-    "expected_row_count": 3
+    "expected_row_count": 3,
+    "difficulty": "basique"
   },
   {
     "id": "meilleur_jour",
-    "question": "Quelle date a le chiffre d'affaires le plus eleve ?",
-    "expected_rows": [["2026-06-08"]],
-    "first_column_only": true
+    "question": "Quelle date a le chiffre d'affaires le plus élevé ?",
+    "expected_rows": [
+      [
+        "2026-06-08"
+      ]
+    ],
+    "first_column_only": true,
+    "difficulty": "basique"
   },
   {
     "id": "montant_moyen",
-    "question": "Montant moyen des commandes completees",
-    "expected_rows": [[120.97]],
-    "tolerance": 0.01
+    "question": "Montant moyen des commandes complétées",
+    "expected_rows": [
+      [
+        120.97
+      ]
+    ],
+    "tolerance": 0.01,
+    "difficulty": "basique"
+  },
+  {
+    "id": "clients_meilleur_jour",
+    "question": "Quels identifiants de clients ont commandé le jour où le chiffre d'affaires a été le plus élevé ?",
+    "expected_rows": [
+      [
+        104
+      ]
+    ],
+    "difficulty": "jointure legitime entre les deux tables via sous-requete"
+  },
+  {
+    "id": "part_relative",
+    "question": "Pour chaque jour, donne la date et son pourcentage du chiffre d'affaires total, arrondi à 2 décimales",
+    "expected_rows": [
+      [
+        "2026-06-01",
+        9.96
+      ],
+      [
+        "2026-06-02",
+        18.6
+      ],
+      [
+        "2026-06-05",
+        22.32
+      ],
+      [
+        "2026-06-08",
+        25.64
+      ],
+      [
+        "2026-06-09",
+        23.48
+      ]
+    ],
+    "tolerance": 0.02,
+    "order_matters": false,
+    "difficulty": "sous-requete scalaire dans le SELECT"
+  },
+  {
+    "id": "moyenne_mobile_3j",
+    "question": "Pour chaque jour, donne la date et la moyenne mobile du chiffre d'affaires sur 3 jours (jour courant et 2 precedents), arrondie a 2 decimales",
+    "expected_rows": [
+      [
+        "2026-06-01",
+        120.5
+      ],
+      [
+        "2026-06-02",
+        172.75
+      ],
+      [
+        "2026-06-05",
+        205.17
+      ],
+      [
+        "2026-06-08",
+        268.4
+      ],
+      [
+        "2026-06-09",
+        288.07
+      ]
+    ],
+    "tolerance": 0.02,
+    "order_matters": false,
+    "difficulty": "fonction fenetre avec ROWS BETWEEN"
+  },
+  {
+    "id": "clients_fideles",
+    "question": "Quels clients ont passé au moins 2 commandes ? Donne l'identifiant et le nombre de commandes",
+    "expected_rows": [
+      [
+        101,
+        3
+      ],
+      [
+        102,
+        3
+      ],
+      [
+        103,
+        2
+      ]
+    ],
+    "order_matters": false,
+    "difficulty": "GROUP BY avec HAVING"
+  },
+  {
+    "id": "jours_sup_moyenne",
+    "question": "Quelles dates ont un chiffre d'affaires supérieur à la moyenne quotidienne ?",
+    "expected_rows": [
+      [
+        "2026-06-05"
+      ],
+      [
+        "2026-06-08"
+      ],
+      [
+        "2026-06-09"
+      ]
+    ],
+    "first_column_only": true,
+    "order_matters": false,
+    "difficulty": "comparaison a un agregat global"
+  },
+  {
+    "id": "panier_moyen_par_jour",
+    "question": "Pour chaque jour, donne la date et le panier moyen (chiffre d'affaires divisé par le nombre de commandes), arrondi à 2 décimales",
+    "expected_rows": [
+      [
+        "2026-06-01",
+        120.5
+      ],
+      [
+        "2026-06-02",
+        75.0
+      ],
+      [
+        "2026-06-05",
+        135.0
+      ],
+      [
+        "2026-06-08",
+        310.2
+      ],
+      [
+        "2026-06-09",
+        94.67
+      ]
+    ],
+    "tolerance": 0.02,
+    "order_matters": false,
+    "difficulty": "calcul derive de deux colonnes agregees"
+  },
+  {
+    "id": "ecart_jour_precedent",
+    "question": "Pour chaque jour, donne la date et l'écart de chiffre d'affaires par rapport au jour précédent, arrondi à 2 décimales",
+    "expected_rows": [
+      [
+        "2026-06-01",
+        null
+      ],
+      [
+        "2026-06-02",
+        104.5
+      ],
+      [
+        "2026-06-05",
+        45.0
+      ],
+      [
+        "2026-06-08",
+        40.2
+      ],
+      [
+        "2026-06-09",
+        -26.2
+      ]
+    ],
+    "tolerance": 0.02,
+    "order_matters": false,
+    "difficulty": "LAG avec NULL sur la premiere ligne"
   }
 ]

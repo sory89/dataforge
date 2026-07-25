@@ -9,7 +9,7 @@ TAG="${1:-local}"
 # Pointe le client Docker vers le daemon interne de Minikube
 eval "$(minikube -p "$PROFILE" docker-env)"
 
-docker build -t "llm-service:${TAG}" llm_service/
+docker build -f llm_service/Dockerfile -t "llm-service:${TAG}" .
 
 echo ">> Image llm-service:${TAG} disponible dans le cluster."
 echo ">> Pour l'utiliser, dans k8s/base/kustomization.yaml :"

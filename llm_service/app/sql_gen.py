@@ -9,17 +9,21 @@ import httpx
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:1.5b")
 TIMEOUT = float(os.getenv("OLLAMA_TIMEOUT", "60"))
-# Deterministe : sans temperature nulle, le meme prompt donne des SQL
-# differents d'un run a l'autre. Un gate CI non reproductible est inutilisable.
+# Déterminisme : sans température nulle, le même prompt donne des SQL différents
+# d'un run à l'autre — un gate CI non reproductible est inutilisable.
 TEMPERATURE = float(os.getenv("OLLAMA_TEMPERATURE", "0"))
 SEED = int(os.getenv("OLLAMA_SEED", "42"))
 
 PROMPTS = {
-    "v1": "Convertis cette question en SQL DuckDB. Réponds uniquement avec le SQL.\nQuestion : {question}",
+    "v1": (
+        "Convertis cette question en SQL DuckDB. Réponds uniquement avec le SQL.\n"
+        "Question : {question}"
+    ),
     "v2": (
         "Tu es un expert SQL DuckDB. Schéma disponible :\n"
         "fct_daily_revenue(order_date DATE, nb_orders INT, revenue_eur DOUBLE)\n"
-        "stg_orders(order_id INT, customer_id INT, order_date DATE, amount_eur DOUBLE, status VARCHAR)\n"
+        "stg_orders(order_id INT, customer_id INT, order_date DATE, "
+        "amount_eur DOUBLE, status VARCHAR)\n"
         "Réponds UNIQUEMENT avec la requête SQL, sans explication ni markdown.\n"
         "Question : {question}"
     ),
@@ -27,7 +31,7 @@ PROMPTS = {
         "Traduis la question en SQL DuckDB.\n\n"
         "Tables :\n"
         "fct_daily_revenue(order_date DATE, nb_orders BIGINT, revenue_eur DOUBLE)"
-        "  -- une ligne par jour, deja agregee\n"
+        "  -- une ligne par jour, déjà agrégée\n"
         "stg_orders(order_id INT, customer_id INT, order_date DATE, "
         "amount_eur DOUBLE, status VARCHAR)  -- une ligne par commande\n\n"
         "Exemples :\n\n"
@@ -38,9 +42,9 @@ PROMPTS = {
         "ORDER BY nb_orders DESC LIMIT 1;\n\n"
         "Q : Toutes les colonnes des commandes du client 42\n"
         "A : SELECT * FROM stg_orders WHERE customer_id = 42;\n\n"
-        "Q : Nombre total de commandes annulees\n"
+        "Q : Nombre total de commandes annulées\n"
         "A : SELECT COUNT(*) FROM stg_orders WHERE status = 'cancelled';\n\n"
-        "Reponds uniquement par la requete SQL.\n\n"
+        "Réponds uniquement par la requête SQL.\n\n"
         "Q : {question}\n"
         "A : "
     ),
