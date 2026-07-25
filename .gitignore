@@ -5,3 +5,7 @@ dbt/target/
 dbt/dbt_packages/
 dbt/logs/
 dbt/prod-artifacts/
+fix_ci.sh
+patch_dataforge.sh
+fix_security.sh
+fix_security.sh

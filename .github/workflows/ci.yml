@@ -55,7 +55,7 @@ jobs:
       - name: Build image (scan only)
         run: docker build -t llm-service:scan llm_service/
       - name: Trivy scan image
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: llm-service:scan
           format: sarif
@@ -84,6 +84,6 @@ jobs:
           cache: pip
       - run: pip install -r requirements-dev.txt
       - name: Construire la base de référence (dbt)
-        run: cd dbt && dbt build --target ci --profiles-dir .
+        run: cd dbt && dbt build --target dev --profiles-dir .
       - name: Gate évaluation Text-to-SQL par exécution (mock en CI)
         run: python llm_service/eval/run_eval.py --threshold 0.80 --mock
