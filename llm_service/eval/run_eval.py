@@ -21,6 +21,7 @@ from datetime import date
 from pathlib import Path
 
 import duckdb
+import httpx
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
@@ -145,7 +146,14 @@ async def run(threshold: float, mock: bool, prompt: str) -> int:
         else:
             from app.sql_gen import generate_sql, is_safe_sql  # noqa: PLC0415
 
-            sql = await generate_sql(case["question"], prompt_version=prompt)
+            try:
+                sql = await generate_sql(case["question"], prompt_version=prompt)
+            except httpx.HTTPError as exc:
+                # Un LLM lent ou injoignable fait echouer LE CAS, pas tout le run.
+                print(f"[FAIL] {case['question']}")
+                print(f"       -> LLM indisponible : {type(exc).__name__}")
+                results[case["id"]] = False
+                continue
             if not is_safe_sql(sql):
                 print(f"[FAIL] {case['question']}\n       SQL rejeté (non lecture seule)")
                 results[case["id"]] = False

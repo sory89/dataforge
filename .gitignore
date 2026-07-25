@@ -7,3 +7,4 @@ dbt/logs/
 dbt/prod-artifacts/
 .venv/
 *.sh
+*.sh

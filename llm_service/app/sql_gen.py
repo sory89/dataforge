@@ -8,7 +8,7 @@ import httpx
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:1.5b")
-TIMEOUT = float(os.getenv("OLLAMA_TIMEOUT", "60"))
+TIMEOUT = float(os.getenv("OLLAMA_TIMEOUT", "180"))
 # Déterminisme : sans température nulle, le même prompt donne des SQL différents
 # d'un run à l'autre — un gate CI non reproductible est inutilisable.
 TEMPERATURE = float(os.getenv("OLLAMA_TEMPERATURE", "0"))
