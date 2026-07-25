@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  - llm-service-rollout.yaml
+  - llm-service-svc.yaml
+
+images:
+  - name: llm-service
+    newName: ghcr.io/OWNER/dataforge/llm-service
+    newTag: staging

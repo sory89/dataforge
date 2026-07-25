@@ -1,0 +1,67 @@
+# Blue/Green via Argo Rollouts : la nouvelle version reçoit le trafic preview,
+# promotion manuelle (ou auto après analyse) vers le service actif.
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: llm-service
+  namespace: dataforge
+spec:
+  replicas: 2
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: llm-service
+  strategy:
+    blueGreen:
+      activeService: llm-service
+      previewService: llm-service-preview
+      autoPromotionEnabled: false
+      prePromotionAnalysis:
+        templates:
+          - templateName: smoke-test
+  template:
+    metadata:
+      labels:
+        app: llm-service
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: llm-service
+          image: llm-service
+          ports:
+            - containerPort: 8000
+          env:
+            - name: OLLAMA_URL
+              value: http://ollama.dataforge.svc:11434
+            - name: PROMPT_VERSION
+              value: v4
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: 500m, memory: 512Mi }
+          readinessProbe:
+            httpGet: { path: /healthz, port: 8000 }
+            initialDelaySeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8000 }
+            initialDelaySeconds: 15
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: smoke-test
+  namespace: dataforge
+spec:
+  metrics:
+    - name: healthcheck
+      provider:
+        job:
+          spec:
+            template:
+              spec:
+                restartPolicy: Never
+                containers:
+                  - name: smoke
+                    image: curlimages/curl:8.9.1
+                    command: ["curl", "-fsS", "http://llm-service-preview.dataforge.svc:8000/healthz"]

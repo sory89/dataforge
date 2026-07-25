@@ -1,0 +1,65 @@
+name: dbt Slim CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "dbt/**"
+  push:
+    branches: [main]
+    paths:
+      - "dbt/**"
+
+jobs:
+  slim-ci:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dbt
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install dbt-core==1.8.5 dbt-duckdb==1.8.3
+
+      - name: Restaurer le manifest de production
+        id: manifest
+        uses: actions/cache/restore@v4
+        with:
+          path: dbt/prod-artifacts
+          key: dbt-manifest-main
+
+
+      - name: Build complet (pas de manifest de référence)
+        if: steps.manifest.outputs.cache-hit != 'true'
+        run: dbt build --target ci
+
+      - name: Slim CI — modèles modifiés + aval uniquement
+        if: steps.manifest.outputs.cache-hit == 'true'
+        run: |
+          dbt build --target ci \
+            --select state:modified+ \
+            --state prod-artifacts \
+            --defer
+
+  save-manifest:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dbt
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install dbt-core==1.8.5 dbt-duckdb==1.8.3
+      - run: dbt compile --target ci
+      - run: mkdir -p prod-artifacts && cp target/manifest.json prod-artifacts/
+      - uses: actions/cache/save@v4
+        with:
+          path: dbt/prod-artifacts
+          key: dbt-manifest-main

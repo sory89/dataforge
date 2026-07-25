@@ -1,0 +1,22 @@
+dataforge:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: dataforge.duckdb
+      threads: 4
+    ci:
+      type: duckdb
+      path: ci.duckdb
+      threads: 4
+    # Exemple prod Snowflake (variables d'env injectées par le CD)
+    prod:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT', 'placeholder') }}"
+      user: "{{ env_var('SNOWFLAKE_USER', 'placeholder') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD', 'placeholder') }}"
+      role: TRANSFORMER
+      database: ANALYTICS
+      warehouse: TRANSFORMING
+      schema: MARTS
+      threads: 8

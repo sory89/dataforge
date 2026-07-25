@@ -1,0 +1,43 @@
+name: CD Production
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE: ${{ github.repository }}/llm-service
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    environment: production   # approbation manuelle configurée sur l'environnement GitHub
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Retag staging -> prod (${GITHUB_REF_NAME})
+        run: |
+          docker pull ${REGISTRY}/${IMAGE}:staging
+          docker tag  ${REGISTRY}/${IMAGE}:staging ${REGISTRY}/${IMAGE}:${GITHUB_REF_NAME}
+          docker tag  ${REGISTRY}/${IMAGE}:staging ${REGISTRY}/${IMAGE}:prod
+          docker push ${REGISTRY}/${IMAGE}:${GITHUB_REF_NAME}
+          docker push ${REGISTRY}/${IMAGE}:prod
+
+  smoke-and-rollback:
+    runs-on: ubuntu-latest
+    needs: promote
+    steps:
+      - uses: actions/checkout@v4
+      - name: Smoke test (blue/green switch géré par Argo Rollouts)
+        run: |
+          # En réel : curl sur l'URL preview du rollout avant promotion
+          echo "kubectl argo rollouts promote llm-service -n dataforge-prod"
+          echo "En cas d'échec des probes : kubectl argo rollouts undo llm-service"

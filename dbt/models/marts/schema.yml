@@ -1,0 +1,10 @@
+version: 2
+
+models:
+  - name: fct_daily_revenue
+    description: Chiffre d'affaires quotidien (commandes complétées)
+    columns:
+      - name: order_date
+        tests: [unique, not_null]
+      - name: revenue_eur
+        tests: [not_null]

@@ -1,0 +1,22 @@
+# Variante locale : à appliquer À LA PLACE de app-llm-service.yaml sur Minikube.
+#   kubectl apply -f k8s/argocd/app-llm-service-local.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: llm-service-local
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/OWNER/dataforge.git
+    targetRevision: main
+    path: k8s/overlays/local
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dataforge
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

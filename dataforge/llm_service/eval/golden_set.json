@@ -1,0 +1,38 @@
+[
+  {
+    "id": "ca_total",
+    "question": "Quel est le chiffre d'affaires total ?",
+    "expected_rows": [[1209.7]],
+    "tolerance": 0.01
+  },
+  {
+    "id": "commandes_par_jour",
+    "question": "Pour chaque jour, donne la date et le nombre de commandes",
+    "expected_rows": [
+      ["2026-06-01", 1],
+      ["2026-06-02", 3],
+      ["2026-06-05", 2],
+      ["2026-06-08", 1],
+      ["2026-06-09", 3]
+    ],
+    "order_matters": false
+  },
+  {
+    "id": "commandes_client_101",
+    "question": "Affiche toutes les colonnes des commandes du client 101",
+    "expected_contains_value": 120.5,
+    "expected_row_count": 3
+  },
+  {
+    "id": "meilleur_jour",
+    "question": "Quelle date a le chiffre d'affaires le plus élevé ?",
+    "expected_rows": [["2026-06-08"]],
+    "first_column_only": true
+  },
+  {
+    "id": "montant_moyen",
+    "question": "Montant moyen des commandes complétées",
+    "expected_rows": [[120.97]],
+    "tolerance": 0.01
+  }
+]

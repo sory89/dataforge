@@ -1,0 +1,13 @@
+order_id,customer_id,order_date,amount_eur,status
+1,101,2026-06-01,120.50,completed
+2,102,2026-06-02,89.90,completed
+3,101,2026-06-03,45.00,cancelled
+4,103,2026-06-05,230.00,completed
+5,102,2026-06-07,15.75,pending
+6,104,2026-06-08,310.20,completed
+7,101,2026-06-02,60.00,completed
+8,103,2026-06-02,75.10,completed
+9,105,2026-06-05,40.00,completed
+10,102,2026-06-09,95.00,completed
+11,106,2026-06-09,88.00,completed
+12,101,2026-06-09,101.00,completed
