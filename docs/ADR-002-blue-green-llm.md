@@ -14,3 +14,16 @@ génère du mauvais SQL).
 ## Conséquences
 - Aucune régression de qualité LLM ne peut atteindre prod sans être mesurée.
 - Le versionning des prompts (PROMPT_VERSION) rend chaque déploiement traçable.
+
+## Verification (25/07/2026)
+
+Deploiement observe de bout en bout sur Minikube : la revision 2 demarre en
+preview, l'AnalysisRun execute le smoke test, le Rollout se met en pause
+(autoPromotionEnabled: false), la preview repond 200 pendant que l'active sert
+encore l'ancienne version, puis `kubectl argo rollouts promote` bascule le trafic.
+La revision 1 est conservee le temps du scaleDownDelay pour permettre un rollback.
+
+Piege rencontre : `kubectl port-forward` se lie a un pod precis et ne suit pas les
+changements d'endpoints du Service. Apres une promotion, le tunnel pointe encore
+sur l'ancien pod et renvoie l'ancienne reponse. Un test de bascule via
+port-forward peut donc faire croire a un echec de promotion.
