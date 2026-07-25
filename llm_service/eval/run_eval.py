@@ -77,11 +77,11 @@ def compare(rows: list[tuple], case: dict) -> tuple[bool, str]:
     if len(actual) != len(expected):
         return False, f"{len(actual)} ligne(s) au lieu de {len(expected)}"
 
-    for got, want in zip(actual, expected):
+    for got, want in zip(actual, expected, strict=False):
         if len(got) < len(want):
             return False, f"colonnes manquantes : {got} vs {want}"
-        for g, w in zip(got, want):
-            if isinstance(g, (int, float)) and isinstance(w, (int, float)):
+        for g, w in zip(got, want, strict=False):
+            if isinstance(g, int | float) and isinstance(w, int | float):
                 if abs(g - w) > case.get("tolerance", 0.01):
                     return False, f"valeur {g} au lieu de {w}"
             elif str(g) != str(w):

@@ -15,11 +15,15 @@ TEMPERATURE = float(os.getenv("OLLAMA_TEMPERATURE", "0"))
 SEED = int(os.getenv("OLLAMA_SEED", "42"))
 
 PROMPTS = {
-    "v1": "Convertis cette question en SQL DuckDB. Réponds uniquement avec le SQL.\nQuestion : {question}",
+    "v1": (
+        "Convertis cette question en SQL DuckDB. Réponds uniquement avec le SQL.\n"
+        "Question : {question}"
+    ),
     "v2": (
         "Tu es un expert SQL DuckDB. Schéma disponible :\n"
         "fct_daily_revenue(order_date DATE, nb_orders INT, revenue_eur DOUBLE)\n"
-        "stg_orders(order_id INT, customer_id INT, order_date DATE, amount_eur DOUBLE, status VARCHAR)\n"
+        "stg_orders(order_id INT, customer_id INT, order_date DATE, "
+        "amount_eur DOUBLE, status VARCHAR)\n"
         "Réponds UNIQUEMENT avec la requête SQL, sans explication ni markdown.\n"
         "Question : {question}"
     ),

@@ -39,7 +39,7 @@ async def query(q: Question) -> SQLResponse:
         con = duckdb.connect(DB_PATH, read_only=DB_PATH != ":memory:")
         result = con.execute(sql)
         columns = [d[0] for d in result.description]
-        rows = [dict(zip(columns, r)) for r in result.fetchall()]
+        rows = [dict(zip(columns, r, strict=False)) for r in result.fetchall()]
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=422, detail=f"Erreur d'exécution SQL : {exc}") from exc
     return SQLResponse(sql=sql, rows=rows, prompt_version=PROMPT_VERSION)
