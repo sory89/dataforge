@@ -52,7 +52,7 @@ mk-status:
 	kubectl argo rollouts get rollout llm-service -n dataforge || true
 
 llm-eval-compare:
-	@for v in v2 v3 v4; do \
+	@for v in v2 v4 v5; do \
 		echo "=== prompt $$v ==="; \
 		$(PY) llm_service/eval/run_eval.py --prompt $$v --threshold 0 | tail -1; \
 	done

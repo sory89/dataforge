@@ -186,7 +186,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--threshold", type=float, default=0.80)
     parser.add_argument("--mock", action="store_true")
-    parser.add_argument("--prompt", default="v4", choices=["v1", "v2", "v3", "v4"])
+    parser.add_argument("--prompt", default="v4", choices=["v1", "v2", "v3", "v4", "v5"])
     parser.add_argument(
         "--runs", type=int, default=1, help="répète l'éval pour mesurer la stabilité"
     )
