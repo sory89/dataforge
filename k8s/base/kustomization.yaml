@@ -8,5 +8,5 @@ resources:
 
 images:
   - name: llm-service
-    newName: ghcr.io/OWNER/dataforge/llm-service
+    newName: ghcr.io/sory89/dataforge/llm-service
     newTag: staging

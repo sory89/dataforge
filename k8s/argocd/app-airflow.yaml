@@ -15,7 +15,7 @@ spec:
         dags:
           gitSync:
             enabled: true
-            repo: https://github.com/OWNER/dataforge.git
+            repo: https://github.com/sory89/dataforge.git
             branch: main
             subPath: airflow/dags
         webserver:
