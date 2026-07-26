@@ -113,7 +113,7 @@ def is_safe_sql(sql: str) -> bool:
     return sql.strip().lower().startswith("select") and not FORBIDDEN.search(sql)
 
 
-async def generate_sql(question: str, prompt_version: str = "v5") -> str:
+async def generate_sql(question: str, prompt_version: str = "v4") -> str:
     prompt = PROMPTS[prompt_version].format(question=question)
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
         resp = await client.post(
