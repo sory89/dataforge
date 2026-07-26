@@ -1,0 +1,154 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    rule_files:
+      - /etc/prometheus/rules/*.yml
+
+    scrape_configs:
+      # --- Metriques applicatives : pods portant l'annotation prometheus.io/scrape ---
+      - job_name: dataforge-pods
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: "true"
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            target_label: app
+          # rollouts-pod-template-hash distingue les revisions blue/green
+          - source_labels: [__meta_kubernetes_pod_label_rollouts_pod_template_hash]
+            target_label: revision
+
+      # --- CPU et memoire des conteneurs, via cAdvisor embarque dans le kubelet ---
+      - job_name: kubernetes-cadvisor
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          insecure_skip_verify: true
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        kubernetes_sd_configs:
+          - role: node
+        relabel_configs:
+          - action: labelmap
+            regex: __meta_kubernetes_node_label_(.+)
+          - target_label: __address__
+            replacement: kubernetes.default.svc:443
+          - source_labels: [__meta_kubernetes_node_name]
+            regex: (.+)
+            target_label: __metrics_path__
+            replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
+        metric_relabel_configs:
+          # On ne garde que ce qui sert au tableau de bord : le reste est volumineux.
+          - source_labels: [__name__]
+            action: keep
+            regex: container_(cpu_usage_seconds_total|memory_working_set_bytes|cpu_cfs_throttled_seconds_total|network_receive_bytes_total|network_transmit_bytes_total)
+
+      # --- Metriques du noeud (CPU, RAM, disque de la machine) ---
+      - job_name: kubernetes-nodes
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          insecure_skip_verify: true
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        kubernetes_sd_configs:
+          - role: node
+        relabel_configs:
+          - action: labelmap
+            regex: __meta_kubernetes_node_label_(.+)
+          - target_label: __address__
+            replacement: kubernetes.default.svc:443
+          - source_labels: [__meta_kubernetes_node_name]
+            regex: (.+)
+            target_label: __metrics_path__
+            replacement: /api/v1/nodes/$1/proxy/metrics
+
+      - job_name: kube-state-metrics
+        static_configs:
+          - targets: [kube-state-metrics.monitoring.svc:8080]
+
+      - job_name: prometheus
+        static_configs:
+          - targets: [localhost:9090]
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules
+  namespace: monitoring
+data:
+  dataforge.yml: |
+    groups:
+      - name: qualite-llm
+        rules:
+          # Taux d'echec exploitable meme sans trafic : clamp_min evite la division
+          # par zero, qui produirait NaN et ferait echouer l'analyse Argo a tort.
+          - record: dataforge:echec_ratio
+            expr: |
+              (sum(rate(dataforge_queries_total{outcome=~"invalid_sql|llm_error"}[5m])) or vector(0))
+              / clamp_min(sum(rate(dataforge_queries_total[5m])) or vector(0), 0.0001)
+
+          - alert: SqlInvalideEleve
+            expr: dataforge:echec_ratio > 0.25
+            for: 3m
+            labels: { severity: warning }
+            annotations:
+              summary: "Plus de 25% des requetes echouent"
+              description: >-
+                SQL invalide ou LLM injoignable sur plus d'un quart des requetes.
+                Verifier une regression de prompt ou l'etat d'Ollama.
+
+          - alert: DependanceIndisponible
+            expr: dataforge_dependency_up == 0
+            for: 2m
+            labels: { severity: critical }
+            annotations:
+              summary: "Dependance {{ $labels.dependency }} injoignable"
+
+          - alert: GenerationLente
+            expr: |
+              histogram_quantile(0.95,
+                sum(rate(dataforge_llm_generation_seconds_bucket[10m])) by (le)) > 60
+            for: 5m
+            labels: { severity: warning }
+            annotations:
+              summary: "p95 de generation SQL au-dela de 60 s"
+
+      - name: ressources
+        rules:
+          - alert: MemoireProchDeLaLimite
+            expr: |
+              container_memory_working_set_bytes{namespace="dataforge",container="llm-service"}
+              / 536870912 > 0.9
+            for: 5m
+            labels: { severity: warning }
+            annotations:
+              summary: "Memoire du pod au-dela de 90% de la limite (512 Mi)"
+
+          - alert: CpuThrottle
+            expr: |
+              rate(container_cpu_cfs_throttled_seconds_total{namespace="dataforge",container="llm-service"}[5m]) > 0.2
+            for: 5m
+            labels: { severity: warning }
+            annotations:
+              summary: "CPU du pod bride par la limite"

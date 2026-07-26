@@ -54,20 +54,3 @@ Les deux scripts (`minikube_bootstrap.sh` / `k3d_bootstrap.sh`) d√©ploient la m√
 ```bash
 make mk-down
 ```
-
-## Ollama accessible depuis le cluster
-
-Ollama n'ecoute que sur 127.0.0.1 par defaut, donc injoignable depuis un pod.
-Override systemd necessaire :
-
-```bash
-sudo mkdir -p /etc/systemd/system/ollama.service.d
-sudo tee /etc/systemd/system/ollama.service.d/override.conf << 'CONF'
-[Service]
-Environment="OLLAMA_HOST=0.0.0.0:11434"
-CONF
-sudo systemctl daemon-reload && sudo systemctl restart ollama
-```
-
-Verification : `ss -tlnp | grep 11434` doit montrer `*:11434`.
-Depuis un pod : `http://host.minikube.internal:11434`.

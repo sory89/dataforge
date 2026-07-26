@@ -4,11 +4,9 @@ kind: Kustomization
 resources:
   - ../../base
 
-# ATTENTION : les transformations d'image de Kustomize s'enchainent.
-# La base a deja renomme llm-service -> ghcr.io/sory89/dataforge/llm-service,
-# donc l'overlay doit cibler CE nom, pas le nom d'origine.
+# En local Minikube : image buildée dans le daemon interne, pas de registry
 images:
-  - name: ghcr.io/sory89/dataforge/llm-service
+  - name: llm-service
     newName: llm-service
     newTag: local
 

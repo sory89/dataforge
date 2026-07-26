@@ -19,10 +19,19 @@ spec:
       prePromotionAnalysis:
         templates:
           - templateName: smoke-test
+      # Apres bascule du trafic, on surveille la qualite reelle. Un echec ici
+      # declenche un rollback automatique vers la revision precedente.
+      postPromotionAnalysis:
+        templates:
+          - templateName: qualite-sql
   template:
     metadata:
       labels:
         app: llm-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: /metrics
     spec:
       securityContext:
         runAsNonRoot: true
@@ -38,7 +47,7 @@ spec:
             - name: OLLAMA_URL
               value: http://host.minikube.internal:11434
             - name: PROMPT_VERSION
-              value: v4
+              value: v5
           resources:
             requests: { cpu: 100m, memory: 256Mi }
             limits: { cpu: 500m, memory: 512Mi }
@@ -68,3 +77,28 @@ spec:
                   - name: smoke
                     image: curlimages/curl:8.9.1
                     command: ["curl", "-fsS", "http://llm-service-preview.dataforge.svc:8000/healthz"]
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: qualite-sql
+  namespace: dataforge
+spec:
+  metrics:
+    - name: taux-echec-sql
+      # 5 mesures espacees de 60 s : on laisse du trafic s'accumuler avant de juger.
+      initialDelay: 60s
+      interval: 60s
+      count: 5
+      # Tolere 2 mesures mauvaises, echoue a la 3e.
+      failureLimit: 2
+      successCondition: result[0] <= 0.25
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring.svc:9090
+          # clamp_min evite la division par zero sans trafic, qui donnerait NaN
+          # et ferait echouer l'analyse a tort.
+          query: |
+            (sum(rate(dataforge_queries_total{outcome=~"invalid_sql|llm_error"}[5m])) or vector(0))
+            /
+            clamp_min(sum(rate(dataforge_queries_total[5m])) or vector(0), 0.0001)

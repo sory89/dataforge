@@ -1,0 +1,87 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-provisioning
+  namespace: monitoring
+data:
+  datasource.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        uid: prom
+        type: prometheus
+        access: proxy
+        url: http://prometheus.monitoring.svc:9090
+        isDefault: true
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: dataforge
+        orgId: 1
+        folder: DataForge
+        type: file
+        disableDeletion: true
+        options:
+          path: /var/lib/grafana/dashboards
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: grafana }
+  template:
+    metadata:
+      labels: { app: grafana }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 472
+        fsGroup: 472
+      containers:
+        - name: grafana
+          image: grafana/grafana:12.2.0
+          env:
+            # Cluster de demonstration : acces anonyme en lecture, pas de secret a gerer.
+            # A ne jamais faire sur un cluster expose.
+            - { name: GF_AUTH_ANONYMOUS_ENABLED, value: "true" }
+            - { name: GF_AUTH_ANONYMOUS_ORG_ROLE, value: Viewer }
+            - { name: GF_AUTH_BASIC_ENABLED, value: "true" }
+            - { name: GF_SECURITY_ADMIN_PASSWORD, value: dataforge }
+            - { name: GF_USERS_DEFAULT_THEME, value: light }
+            - { name: GF_ANALYTICS_REPORTING_ENABLED, value: "false" }
+          ports:
+            - { containerPort: 3000, name: http }
+          resources:
+            requests: { cpu: 50m, memory: 150Mi }
+            limits: { cpu: 500m, memory: 400Mi }
+          readinessProbe:
+            httpGet: { path: /api/health, port: 3000 }
+            initialDelaySeconds: 15
+          volumeMounts:
+            - { name: prov-ds, mountPath: /etc/grafana/provisioning/datasources }
+            - { name: prov-dash, mountPath: /etc/grafana/provisioning/dashboards }
+            - { name: dashboards, mountPath: /var/lib/grafana/dashboards }
+      volumes:
+        - name: prov-ds
+          configMap:
+            name: grafana-provisioning
+            items: [{ key: datasource.yaml, path: datasource.yaml }]
+        - name: prov-dash
+          configMap:
+            name: grafana-provisioning
+            items: [{ key: dashboards.yaml, path: dashboards.yaml }]
+        - name: dashboards
+          configMap: { name: grafana-dashboard-dataforge }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  selector: { app: grafana }
+  ports: [{ port: 3000, targetPort: 3000, name: http }]

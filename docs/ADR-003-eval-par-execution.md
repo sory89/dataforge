@@ -58,95 +58,51 @@ D'où `make llm-eval-compare`, qui mesure tous les prompts sur le même golden s
 sans mesure comparative, l'intuition sur « le meilleur prompt » est fausse une
 fois sur deux.
 
-### v5 : experience negative, retour a v4
+## Mesure finale (25/07/2026) — golden set 12 cas, deterministe
 
 | Prompt | Basiques | Difficiles | Total |
 |---|---|---|---|
-| v4 | 5/5 | 6/7 | **92 %** |
-| v5 | 4/5 | 6/7 | 83 % |
+| v4 (few-shot, 4 exemples) | 5/5 | 6/7 | **92 %** |
 
-v5 a bien corrige sa cible (le panier moyen passe, sans GROUP BY superflu), mais
-a provoque deux regressions ailleurs :
+Le golden set discrimine desormais. Avec 5 cas triviaux, v2/v3/v4 obtenaient
+tous 100 % : le gate ne protegeait de rien. Les 7 cas ajoutes (fenetres,
+sous-requetes scalaires, HAVING, LAG, calcul derive) situent le modele a 92 %.
 
-1. L'exemple `SELECT customer_id, COUNT(*) FROM stg_orders GROUP BY customer_id`
-   a pousse le modele vers la table de detail pour toute question de comptage :
-   « nombre de commandes par jour » interroge desormais `stg_orders` et renvoie
-   6 lignes au lieu de 5.
-2. Sur le LAG, apparition d'un `WHERE order_date > DATE_TRUNC('day',
-   CURRENT_DATE)` injustifie qui vide le resultat.
+Le modele reussit des constructions non triviales : `ROWS BETWEEN 2 PRECEDING`,
+`SUM() OVER ()`, `LAG()`, `HAVING`, sous-requete scalaire correlee.
 
-**Enseignement principal du projet** : sur un modele de 1,5 Md de parametres, une
-modification de prompt a des effets **non locaux**. Ajouter un exemple pour
-corriger un cas en degrade d'autres, de facon non predictible. Deux tentatives
-d'amelioration successives (v3, v5) ont toutes deux baisse le score.
+### L'unique echec
 
-C'est ce qui justifie l'existence du gate : il a detecte une regression
-introduite par un changement qui paraissait raisonnable et qui corrigeait
-effectivement sa cible. Sans mesure d'execution sur un jeu discriminant, v5
-aurait ete deploye comme une amelioration.
+```sql
+-- Question : panier moyen par jour (CA / nb commandes)
+SELECT order_date, ROUND(revenue_eur / nb_orders, 2)
+FROM fct_daily_revenue GROUP BY order_date;   -- Binder Error
+```
 
-Decision : **v4 reste le prompt de production**. v5 est conserve dans le code
-comme experience documentee. Progresser au-dela de 92 % passe par un modele plus
-capable, pas par du prompt engineering supplementaire sur celui-ci.
+Un `GROUP BY` superflu sur une table deja agregee. C'est precisement la classe
+d'erreur que le prompt v3 visait par des regles negatives — le probleme etait
+donc reel, mais la solution mauvaise (v3 : 40 %).
 
-### v5 : experience negative, retour a v4
+Note : la formulation « Pour chaque jour » apparait dans trois autres cas qui
+passent sans `GROUP BY`. Il s'agit donc d'une incoherence du modele, pas d'une
+ambiguite de la question.
 
-| Prompt | Basiques | Difficiles | Total |
-|---|---|---|---|
-| v4 | 5/5 | 6/7 | **92 %** |
-| v5 | 4/5 | 6/7 | 83 % |
+### Prompt v5 et risque de surapprentissage
 
-v5 a bien corrige sa cible (le panier moyen passe, sans GROUP BY superflu), mais
-a provoque deux regressions ailleurs :
+v5 ajoute un exemple de **calcul derive** entre deux colonnes de la table
+agregee, plus une regle positive (« GROUP BY uniquement sur la table de
+detail ») formulee de facon generique.
 
-1. L'exemple `SELECT customer_id, COUNT(*) FROM stg_orders GROUP BY customer_id`
-   a pousse le modele vers la table de detail pour toute question de comptage :
-   « nombre de commandes par jour » interroge desormais `stg_orders` et renvoie
-   6 lignes au lieu de 5.
-2. Sur le LAG, apparition d'un `WHERE order_date > DATE_TRUNC('day',
-   CURRENT_DATE)` injustifie qui vide le resultat.
+Attention methodologique : ajouter un exemple qui reproduit le cas en echec
+serait du surapprentissage au benchmark. Le score monterait a 100 % sans preuve
+de generalisation. L'exemple v5 est donc volontairement generique (ratio entre
+deux colonnes, pas le panier moyen). Valider reellement la generalisation
+exigerait un **jeu de validation tenu a l'ecart**, jamais consulte pendant
+l'iteration sur les prompts — c'est la prochaine etape logique du projet.
 
-**Enseignement principal du projet** : sur un modele de 1,5 Md de parametres, une
-modification de prompt a des effets **non locaux**. Ajouter un exemple pour
-corriger un cas en degrade d'autres, de facon non predictible. Deux tentatives
-d'amelioration successives (v3, v5) ont toutes deux baisse le score.
+### Limite operationnelle
 
-C'est ce qui justifie l'existence du gate : il a detecte une regression
-introduite par un changement qui paraissait raisonnable et qui corrigeait
-effectivement sa cible. Sans mesure d'execution sur un jeu discriminant, v5
-aurait ete deploye comme une amelioration.
-
-Decision : **v4 reste le prompt de production**. v5 est conserve dans le code
-comme experience documentee. Progresser au-dela de 92 % passe par un modele plus
-capable, pas par du prompt engineering supplementaire sur celui-ci.
-
-### v5 : experience negative, retour a v4
-
-| Prompt | Basiques | Difficiles | Total |
-|---|---|---|---|
-| v4 | 5/5 | 6/7 | **92 %** |
-| v5 | 4/5 | 6/7 | 83 % |
-
-v5 a bien corrige sa cible (le panier moyen passe, sans GROUP BY superflu), mais
-a provoque deux regressions ailleurs :
-
-1. L'exemple `SELECT customer_id, COUNT(*) FROM stg_orders GROUP BY customer_id`
-   a pousse le modele vers la table de detail pour toute question de comptage :
-   « nombre de commandes par jour » interroge desormais `stg_orders` et renvoie
-   6 lignes au lieu de 5.
-2. Sur le LAG, apparition d'un `WHERE order_date > DATE_TRUNC('day',
-   CURRENT_DATE)` injustifie qui vide le resultat.
-
-**Enseignement principal du projet** : sur un modele de 1,5 Md de parametres, une
-modification de prompt a des effets **non locaux**. Ajouter un exemple pour
-corriger un cas en degrade d'autres, de facon non predictible. Deux tentatives
-d'amelioration successives (v3, v5) ont toutes deux baisse le score.
-
-C'est ce qui justifie l'existence du gate : il a detecte une regression
-introduite par un changement qui paraissait raisonnable et qui corrigeait
-effectivement sa cible. Sans mesure d'execution sur un jeu discriminant, v5
-aurait ete deploye comme une amelioration.
-
-Decision : **v4 reste le prompt de production**. v5 est conserve dans le code
-comme experience documentee. Progresser au-dela de 92 % passe par un modele plus
-capable, pas par du prompt engineering supplementaire sur celui-ci.
+`qwen2.5-coder:1.5b` sur CPU depasse regulierement 60 s sur les cas complexes
+(timeout releve a 180 s). Un gate CI reel exigerait un modele servi avec
+acceleration materielle, ou un sous-ensemble du golden set en pre-merge et
+l'ensemble complet en nightly.

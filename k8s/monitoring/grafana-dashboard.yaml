@@ -1,0 +1,376 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataforge
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataforge.json: |
+    {
+      "uid": "dataforge",
+      "title": "DataForge — service Text-to-SQL",
+      "tags": [
+        "dataforge",
+        "llm"
+      ],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "15s",
+      "time": {
+        "from": "now-1h",
+        "to": "now"
+      },
+      "panels": [
+        {
+          "id": 1,
+          "title": "Taux d'échec (SQL invalide ou LLM injoignable)",
+          "type": "stat",
+          "gridPos": {
+            "h": 6,
+            "w": 8,
+            "x": 0,
+            "y": 0
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom"
+          },
+          "targets": [
+            {
+              "expr": "dataforge:echec_ratio * 100",
+              "legendFormat": "échec %",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 10
+                  },
+                  {
+                    "color": "red",
+                    "value": 25
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            }
+          }
+        },
+        {
+          "id": 2,
+          "title": "Issues des requêtes par minute",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 6,
+            "w": 8,
+            "x": 8,
+            "y": 0
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom"
+          },
+          "targets": [
+            {
+              "expr": "sum by (outcome) (rate(dataforge_queries_total[5m]) * 60)",
+              "legendFormat": "{{outcome}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqpm"
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 3,
+          "title": "Dépendances (1 = joignable)",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 6,
+            "w": 8,
+            "x": 16,
+            "y": 0
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom"
+          },
+          "targets": [
+            {
+              "expr": "dataforge_dependency_up",
+              "legendFormat": "{{dependency}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short"
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 4,
+          "title": "Latence de génération SQL (LLM)",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 6
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom"
+          },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.50, sum(rate(dataforge_llm_generation_seconds_bucket[10m])) by (le))",
+              "legendFormat": "p50",
+              "refId": "A"
+            },
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(dataforge_llm_generation_seconds_bucket[10m])) by (le))",
+              "legendFormat": "p95",
+              "refId": "B"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s"
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 5,
+          "title": "Requêtes par version de prompt",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 12,
+            "y": 6
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom"
+          },
+          "targets": [
+            {
+              "expr": "sum by (prompt_version) (rate(dataforge_queries_total[5m]) * 60)",
+              "legendFormat": "{{prompt_version}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqpm"
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 6,
+          "title": "CPU du conteneur (cœurs) — limite 0,5",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 0,
+            "y": 13
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom"
+          },
+          "targets": [
+            {
+              "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"dataforge\",container=\"llm-service\"}[5m]))",
+              "legendFormat": "{{pod}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short"
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 7,
+          "title": "Mémoire du conteneur — limite 512 Mi",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 8,
+            "y": 13
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom"
+          },
+          "targets": [
+            {
+              "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"dataforge\",container=\"llm-service\"})",
+              "legendFormat": "{{pod}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes"
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 8,
+          "title": "CPU et RAM du process Python",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 16,
+            "y": 13
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom"
+          },
+          "targets": [
+            {
+              "expr": "rate(process_cpu_seconds_total{app=\"llm-service\"}[5m])",
+              "legendFormat": "CPU (cœurs)",
+              "refId": "A"
+            },
+            {
+              "expr": "process_resident_memory_bytes{app=\"llm-service\"} / 1048576",
+              "legendFormat": "RSS (Mio)",
+              "refId": "B"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short"
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 9,
+          "title": "Latence d'exécution SQL sur DuckDB",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 6,
+            "w": 8,
+            "x": 0,
+            "y": 20
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom"
+          },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(dataforge_sql_execution_seconds_bucket[10m])) by (le))",
+              "legendFormat": "p95",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s"
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 10,
+          "title": "Lignes retournées (p50 / p95)",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 6,
+            "w": 8,
+            "x": 8,
+            "y": 20
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom"
+          },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.50, sum(rate(dataforge_rows_returned_bucket[10m])) by (le))",
+              "legendFormat": "p50",
+              "refId": "A"
+            },
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(dataforge_rows_returned_bucket[10m])) by (le))",
+              "legendFormat": "p95",
+              "refId": "B"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short"
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 11,
+          "title": "Pods du namespace dataforge",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 6,
+            "w": 8,
+            "x": 16,
+            "y": 20
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom"
+          },
+          "targets": [
+            {
+              "expr": "sum by (phase) (kube_pod_status_phase{namespace=\"dataforge\"})",
+              "legendFormat": "{{phase}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short"
+            },
+            "overrides": []
+          }
+        }
+      ]
+    }

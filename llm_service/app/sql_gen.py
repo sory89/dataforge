@@ -28,29 +28,29 @@ PROMPTS = {
         "Question : {question}"
     ),
     "v5": (
-        "Traduis la question en SQL DuckDB.\\n\\n"
-        "Tables :\\n"
+        "Traduis la question en SQL DuckDB.\n\n"
+        "Tables :\n"
         "fct_daily_revenue(order_date DATE, nb_orders BIGINT, revenue_eur DOUBLE)"
-        "  -- une ligne par jour, deja agregee : pas de GROUP BY necessaire\\n"
+        "  -- une ligne par jour, deja agregee : pas de GROUP BY necessaire\n"
         "stg_orders(order_id INT, customer_id INT, order_date DATE, "
-        "amount_eur DOUBLE, status VARCHAR)  -- une ligne par commande\\n\\n"
-        "Exemples :\\n\\n"
-        "Q : Chiffre d'affaires par jour, avec la date\\n"
-        "A : SELECT order_date, revenue_eur FROM fct_daily_revenue ORDER BY order_date;\\n\\n"
-        "Q : Quel jour compte le plus de commandes, avec la date\\n"
+        "amount_eur DOUBLE, status VARCHAR)  -- une ligne par commande\n\n"
+        "Exemples :\n\n"
+        "Q : Chiffre d'affaires par jour, avec la date\n"
+        "A : SELECT order_date, revenue_eur FROM fct_daily_revenue ORDER BY order_date;\n\n"
+        "Q : Quel jour compte le plus de commandes, avec la date\n"
         "A : SELECT order_date, nb_orders FROM fct_daily_revenue "
-        "ORDER BY nb_orders DESC LIMIT 1;\\n\\n"
+        "ORDER BY nb_orders DESC LIMIT 1;\n\n"
         "Q : Pour chaque jour, la date et le ratio entre deux colonnes de "
-        "fct_daily_revenue\\n"
-        "A : SELECT order_date, revenue_eur / nb_orders FROM fct_daily_revenue;\\n\\n"
-        "Q : Toutes les colonnes des commandes du client 42\\n"
-        "A : SELECT * FROM stg_orders WHERE customer_id = 42;\\n\\n"
-        "Q : Nombre de commandes par client, avec l'identifiant\\n"
-        "A : SELECT customer_id, COUNT(*) FROM stg_orders GROUP BY customer_id;\\n\\n"
+        "fct_daily_revenue\n"
+        "A : SELECT order_date, revenue_eur / nb_orders FROM fct_daily_revenue;\n\n"
+        "Q : Toutes les colonnes des commandes du client 42\n"
+        "A : SELECT * FROM stg_orders WHERE customer_id = 42;\n\n"
+        "Q : Nombre de commandes par client, avec l'identifiant\n"
+        "A : SELECT customer_id, COUNT(*) FROM stg_orders GROUP BY customer_id;\n\n"
         "Regle : GROUP BY uniquement sur stg_orders (table de detail). "
-        "fct_daily_revenue a deja une ligne par jour.\\n\\n"
-        "Reponds uniquement par la requete SQL.\\n\\n"
-        "Q : {question}\\n"
+        "fct_daily_revenue a deja une ligne par jour.\n\n"
+        "Reponds uniquement par la requete SQL.\n\n"
+        "Q : {question}\n"
         "A : "
     ),
     "v4": (
@@ -113,7 +113,7 @@ def is_safe_sql(sql: str) -> bool:
     return sql.strip().lower().startswith("select") and not FORBIDDEN.search(sql)
 
 
-async def generate_sql(question: str, prompt_version: str = "v4") -> str:
+async def generate_sql(question: str, prompt_version: str = "v5") -> str:
     prompt = PROMPTS[prompt_version].format(question=question)
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
         resp = await client.post(

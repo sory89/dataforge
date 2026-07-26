@@ -72,3 +72,14 @@ def test_readyz_ne_depend_pas_du_llm(monkeypatch, tmp_path):
     body = TestClient(main.app).get("/readyz").json()
     assert body["ready"] is True
     assert "injoignable" in body["checks"]["ollama"]
+
+
+def test_console_web_servie_a_la_racine():
+    """La console HTML doit etre servie sur / (interface du service)."""
+    from app.main import app
+    from fastapi.testclient import TestClient
+
+    r = TestClient(app).get("/")
+    assert r.status_code == 200
+    assert "text/html" in r.headers["content-type"]
+    assert "fct_daily_revenue" in r.text

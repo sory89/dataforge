@@ -56,3 +56,20 @@ llm-eval-compare:
 		echo "=== prompt $$v ==="; \
 		$(PY) llm_service/eval/run_eval.py --prompt $$v --threshold 0 | tail -1; \
 	done
+
+# --- Monitoring ---
+.PHONY: mk-monitoring mk-monitoring-ui
+
+mk-monitoring:
+	kubectl apply -k k8s/monitoring
+	kubectl -n monitoring rollout status deploy/prometheus --timeout=180s
+	kubectl -n monitoring rollout status deploy/grafana --timeout=180s
+
+mk-monitoring-ui:
+	@pkill -f "port-forward.*3000" 2>/dev/null || true
+	@pkill -f "port-forward.*9090" 2>/dev/null || true
+	@kubectl -n monitoring port-forward svc/grafana 3000:3000 > /dev/null 2>&1 &
+	@kubectl -n monitoring port-forward svc/prometheus 9090:9090 > /dev/null 2>&1 &
+	@sleep 3
+	@echo "Grafana    http://localhost:3000  (anonyme, ou admin/dataforge)"
+	@echo "Prometheus http://localhost:9090"
