@@ -210,7 +210,7 @@ data:
           },
           "targets": [
             {
-              "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"dataforge\",container=\"llm-service\"}[5m]))",
+              "expr": "max by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"dataforge\",pod=~\"llm-service-.*\"}[5m]))",
               "legendFormat": "{{pod}}",
               "refId": "A"
             }
@@ -238,7 +238,7 @@ data:
           },
           "targets": [
             {
-              "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"dataforge\",container=\"llm-service\"})",
+              "expr": "max by (pod) (container_memory_working_set_bytes{namespace=\"dataforge\",pod=~\"llm-service-.*\"})",
               "legendFormat": "{{pod}}",
               "refId": "A"
             }
@@ -267,12 +267,12 @@ data:
           "targets": [
             {
               "expr": "rate(process_cpu_seconds_total{app=\"llm-service\"}[5m])",
-              "legendFormat": "CPU (cœurs)",
+              "legendFormat": "CPU {{pod}}",
               "refId": "A"
             },
             {
               "expr": "process_resident_memory_bytes{app=\"llm-service\"} / 1048576",
-              "legendFormat": "RSS (Mio)",
+              "legendFormat": "RSS {{pod}}",
               "refId": "B"
             }
           ],
